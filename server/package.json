@@ -1,0 +1,20 @@
+{
+  "name": "server",
+  "module": "index.ts",
+  "type": "module",
+  "scripts": {
+    "dev": "bun index.ts"
+  },
+  "devDependencies": {
+    "bun-types": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@tanstack/router": "beta",
+    "ai": "^2.1.28",
+    "instant-bun": "^0.0.25",
+    "openai-edge": "^1.2.2"
+  }
+}
