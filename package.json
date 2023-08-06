@@ -1,5 +1,8 @@
 {
-    "scripts": {
-        "dev": "bun start.ts"
-    }
+  "scripts": {
+    "dev": "bun start.ts"
+  },
+  "dependencies": {
+    "@instant-bun/react-fetcher": "^0.0.6"
+  }
 }

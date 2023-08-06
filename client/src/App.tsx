@@ -2,11 +2,12 @@ import { FileDirInfo } from "instant-bun/modules/files-factory/files-folder";
 import { useEffect, useState } from "react";
 import { ROUTE_VIEW_DIR, ViewDirectoryResponse } from "../../server/index";
 import "./App.css";
-import useApiFactory from "./use-api-factory";
+import { useApiFactory } from "@instant-bun/react-fetcher";
+
 // import viteLogo from './assets/vite.svg'
 
 type GPTFileServerAppEndpoints = {
-  "/gpt-request-with-files": {
+  "/submit-gpt-files": {
     body: {
       files: FileDirInfo[];
       prompt: string;
@@ -30,7 +31,7 @@ function App() {
   const result = useApiFactory<GPTFileServerAppEndpoints>({
     baseUrl: "http://localhost:8080",
     endpoints: [
-      { endpoint: "/gpt-request-with-files", method: "post" },
+      { endpoint: "/submit-gpt-files", method: "post" },
       {
         endpoint: "/view-directory",
         method: "post",
@@ -38,17 +39,13 @@ function App() {
     ],
   });
 
-  const useGptRequest = result["/gpt-request-with-files"];
+  const useGptRequest = result["/submit-gpt-files"];
   const useViewDirectory = result[ROUTE_VIEW_DIR];
 
   const { data: viewDirectoryData, post: postViewDirectory } =
     useViewDirectory();
 
   const { data: gptRequestData, post: postGptRequest } = useGptRequest();
-
-
-  console.log({
-    viewDirectoryData,  })
 
   const [prevViewPaths, setPrevViewPaths] = useState<FileDirInfo[]>([]);
   const [currentViewPath, setNewViewPath] = useState<FileDirInfo>({

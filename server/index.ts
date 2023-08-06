@@ -8,8 +8,7 @@ const fileFactory = createFileFactory({ baseDirectory: "~/" });
 
 export const ROUTE_VIEW_DIR = "/view-directory";
 
-
-// idea: combine adding the server routes, 
+// idea: combine adding the server routes,
 // with the view response and request types,
 // then it can be configured on the server factory, it should match
 // similar to what the use-advanced-fetcher.ts does
@@ -84,7 +83,7 @@ const openAiCompletions = createOpenAICompletions({
   apiKey: "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",
 });
 
-serverFactory.addRoute("/gpt-request-with-files", async (request) => {
+serverFactory.addRoute("/submit-gpt-files", async (request) => {
   try {
     const text = await request.text();
 
@@ -109,6 +108,10 @@ serverFactory.addRoute("/gpt-request-with-files", async (request) => {
     return response;
   } catch (e) {
     // throw
-    throw e;
+    console.error(e);
+    return new Response("Failed", {
+      status: 500,
+      statusText: `Pooped the bed: ${JSON.stringify(e)}`,
+    });
   }
 });
