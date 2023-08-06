@@ -1,39 +1,71 @@
-import { useFetcher } from "@instant-bun/react-fetcher";
-import { createFetchFactory } from "instant-bun/modules/fetch-factory";
 import { FileDirInfo } from "instant-bun/modules/files-factory/files-folder";
 import { useEffect, useState } from "react";
+import { ROUTE_VIEW_DIR, ViewDirectoryResponse } from "../../server/index";
 import "./App.css";
-import { ROUTE_VIEW_DIR } from "../../server/index";
+import useApiFactory from "./use-api-factory";
 // import viteLogo from './assets/vite.svg'
 
-const fetchFactory = createFetchFactory({
-  baseUrl: "http://localhost:8080",
-});
-
-// todo create session storage and lcoal storage facotry function
-// then save the current view path to local storage
+type GPTFileServerAppEndpoints = {
+  "/gpt-request-with-files": {
+    body: {
+      files: FileDirInfo[];
+      prompt: string;
+    };
+    response: {
+      test: string;
+    };
+    params: {
+      maxFiles: number;
+    };
+  };
+  [ROUTE_VIEW_DIR]: {
+    body: {
+      path: string;
+    };
+    response: ViewDirectoryResponse;
+  };
+};
 
 function App() {
+  const result = useApiFactory<GPTFileServerAppEndpoints>({
+    baseUrl: "http://localhost:8080",
+    endpoints: [
+      { endpoint: "/gpt-request-with-files", method: "post" },
+      {
+        endpoint: "/view-directory",
+        method: "post",
+      },
+    ],
+  });
+
+  const useGptRequest = result["/gpt-request-with-files"];
+  const useViewDirectory = result[ROUTE_VIEW_DIR];
+
+  const { data: viewDirectoryData, post: postViewDirectory } =
+    useViewDirectory();
+
+  const { data: gptRequestData, post: postGptRequest } = useGptRequest();
+
+
+  console.log({
+    viewDirectoryData,  })
+
   const [prevViewPaths, setPrevViewPaths] = useState<FileDirInfo[]>([]);
   const [currentViewPath, setNewViewPath] = useState<FileDirInfo>({
     fullPath: "/Users/brandon",
     name: "instant bun dir",
     type: "directory",
   });
-  const { useData, postJSON } = useFetcher<FileDirInfo[]>({
-    fetchFactory,
-  });
+
   const [filePathsToSubmit, setFilePathsToSubmit] = useState<FileDirInfo[]>([]);
   const [prompt, setPrompt] = useState("");
 
-  const data = useData();
-
-  const handleSubmit = (e: any) => {
+  const handleSubmit = async (e: any) => {
     e.preventDefault();
-    postJSON("/gpt-request-with-files", {
-      files: filePathsToSubmit,
-      prompt,
-    });
+
+    const result = await postGptRequest({ files: filePathsToSubmit, prompt });
+
+    console.log("result", result);
   };
 
   useEffect(() => {
@@ -41,7 +73,7 @@ function App() {
   }, []);
 
   const fetchPath = (path: string) => {
-    return postJSON(ROUTE_VIEW_DIR, {
+    return postViewDirectory({
       path,
     });
   };
@@ -78,7 +110,7 @@ function App() {
           Back Dir
         </button>
 
-        {data?.map((fileOrDir) => {
+        {viewDirectoryData?.map((fileOrDir) => {
           return (
             <div>
               <div>
@@ -89,7 +121,8 @@ function App() {
               <button
                 onClick={() => {
                   //  copy to clipboard the full file path
-                  navigator.clipboard.writeText(fileOrDir.fullPath);
+                  // @ts-ignore
+                  navigator?.clipboard.writeText(fileOrDir.fullPath);
                 }}
               >
                 Copy Path
@@ -125,7 +158,7 @@ function App() {
       <form>
         <label>Prompt</label>
         <textarea
-          onChange={(e) => setPrompt(e.target.value)}
+          onChange={(e) => setPrompt(e.target?.value as any)}
           value={prompt}
           placeholder="Additional Prompt"
         ></textarea>

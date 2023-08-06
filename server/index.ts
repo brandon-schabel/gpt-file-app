@@ -6,29 +6,20 @@ import { createOpenAICompletions } from "instant-bun/modules/utils/open-ai-compl
 const serverFactory = createServerFactory({});
 const fileFactory = createFileFactory({ baseDirectory: "~/" });
 
-type ViewDirectoryRequest = {
+export const ROUTE_VIEW_DIR = "/view-directory";
+
+
+// idea: combine adding the server routes, 
+// with the view response and request types,
+// then it can be configured on the server factory, it should match
+// similar to what the use-advanced-fetcher.ts does
+export type ViewDirectoryResponse = FileDirInfo[];
+export type ViewDirectoryRequest = {
   path: string;
 };
 
-export const ROUTE_VIEW_DIR = "/view-directory";
-
 // TODO need to be able to specificy http method
 serverFactory.addRoute(ROUTE_VIEW_DIR, async (request) => {
-  // const json = await request.json();
-  // const body = await request.body;
-  // console.log({ body });
-  // console.log({ json });
-
-  // console.log(body?.values());
-  // console.log(
-  //   body?.forEach((val, key) => {
-  //     console.log({
-  //       val,
-  //       key,
-  //     });
-  //   })
-  // );
-
   try {
     // const json = await request.json();
     const text = await request.text();
@@ -38,7 +29,7 @@ serverFactory.addRoute(ROUTE_VIEW_DIR, async (request) => {
     };
 
     if (text) {
-      parsedJSON = JSON.parse(text);
+      parsedJSON = JSON.parse(text || "{}");
     }
 
     const pathData = await fileFactory.listFilesAndFolderInPath(
@@ -46,6 +37,7 @@ serverFactory.addRoute(ROUTE_VIEW_DIR, async (request) => {
     );
 
     const response = new Response(JSON.stringify(pathData));
+
     setCors(response);
 
     return response;
@@ -95,7 +87,7 @@ const openAiCompletions = createOpenAICompletions({
 serverFactory.addRoute("/gpt-request-with-files", async (request) => {
   try {
     const text = await request.text();
-    console.log({ text });
+
     const jsonData = (await request.json()) as {
       files: FileDirInfo[];
       prompt: string;
