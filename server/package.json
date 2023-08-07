@@ -12,8 +12,8 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
+    "@u-tools/core": "^0.0.34",
     "ai": "^2.1.28",
-    "@u-tools/core": "^latest",
     "openai-edge": "^1.2.2"
   }
 }

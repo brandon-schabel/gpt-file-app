@@ -1,7 +1,13 @@
 import { FileDirInfo } from "@u-tools/core/modules/files-factory/files-folder";
-import { useApiFactory, useLocalStorage } from "@u-tools/react";
+import { useApiFactory } from "@u-tools/react/use-api-factory";
+import { useLocalStorage } from "@u-tools/react/use-local-storage";
 import { useEffect, useState } from "react";
-import { ROUTE_VIEW_PATH, ViewDirectoryResponse } from "../../shared";
+import {
+  ROUTE_VIEW_PATH,
+  SubmitFilesRequest,
+  SubmitFilesResponse,
+  ViewDirectoryResponse,
+} from "../../shared";
 import "./App.css";
 import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
@@ -19,16 +25,8 @@ import { Textarea } from "./components/ui/textarea";
 
 type GPTFileServerAppEndpoints = {
   "/submit-files": {
-    body: {
-      files: FileDirInfo[];
-      prompt: string;
-    };
-    response: {
-      test: string;
-    };
-    params: {
-      maxFiles: number;
-    };
+    body: SubmitFilesRequest;
+    response: SubmitFilesResponse;
   };
   [ROUTE_VIEW_PATH]: {
     body: {
@@ -70,13 +68,32 @@ function App() {
     useViewDirectory();
   const { data: gptRequestData, post: postGptRequest } = useSubmitFilesPaths();
 
-  const [prevViewPaths, setPrevViewPaths] = useState<FileDirInfo[]>([]);
-  const [forwardPaths, setForwardPaths] = useState<FileDirInfo[]>([]);
-  const [currentViewPath, setNewViewPath] =
-    useState<FileDirInfo>(storedCurrentPath);
+  const [prevViewPaths, setPrevViewPaths] = useLocalStorage<FileDirInfo[]>({
+    key: "prevViewPaths",
+    initialState: [],
+  });
 
-  const [filePathsToSubmit, setFilePathsToSubmit] = useState<FileDirInfo[]>([]);
-  const [prompt, setPrompt] = useState("");
+  const [forwardPaths, setForwardPaths] = useLocalStorage<FileDirInfo[]>({
+    key: "forwardPaths",
+    initialState: [],
+  });
+
+  const [currentViewPath, setNewViewPath] = useLocalStorage<FileDirInfo>({
+    key: "currentViewPath",
+    initialState: storedCurrentPath,
+  });
+
+  const [filePathsToSubmit, setFilePathsToSubmit] = useLocalStorage<
+    FileDirInfo[]
+  >({
+    key: "filePathsToSubmit",
+    initialState: [],
+  });
+
+  const [prompt, setPrompt] = useLocalStorage<string>({
+    key: "prompt",
+    initialState: "",
+  });
 
   const addBookmark = (path: FileDirInfo) => {
     if (!bookmarks.some((b) => b.fullPath === path.fullPath)) {
@@ -141,6 +158,20 @@ function App() {
   return (
     <>
       <div className="w-full">
+        <div>
+          {bookmarks.map((bookmark) => {
+            return (
+              <Button
+                key={bookmark.fullPath}
+                onClick={() => {
+                  changeDir(bookmark);
+                }}
+              >
+                {bookmark.name}
+              </Button>
+            );
+          })}
+        </div>
         <h1>Current Path: {currentViewPath.fullPath}</h1>
         <Input onChange={(e) => setManualInputDir(e.target.value)}></Input>
         <Button
@@ -155,20 +186,18 @@ function App() {
           Go To Path
         </Button>
 
-        {/* bookmarks */}
-        {bookmarks.map((bookmark) => (
-          <Button
-            key={bookmark.fullPath}
-            onClick={() => {
-              changeDir(bookmark);
-            }}
-          >
-            {bookmark.name}
-          </Button>
-        ))}
-
-        <Button onClick={() => backNDirs(1)}>Back</Button>
-        <Button onClick={() => forwardNDirs(1)}>Forward</Button>
+        <Button
+          onClick={() => backNDirs(1)}
+          disabled={prevViewPaths.length === 0}
+        >
+          Back
+        </Button>
+        <Button
+          onClick={() => forwardNDirs(1)}
+          disabled={forwardPaths.length === 0}
+        >
+          Forward
+        </Button>
       </div>
       <ScrollArea className="h-[calc(100vh-128px)] w-full shadow-md border-2 rounded">
         <Table>
@@ -179,6 +208,7 @@ function App() {
               <TableHead>File Type</TableHead>
               <TableHead>Add</TableHead>
               <TableHead>Full Path</TableHead>
+              <TableHead>Bookmark</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -190,10 +220,17 @@ function App() {
                   {data.type === "file" && (
                     <Button
                       onClick={() => {
-                        setFilePathsToSubmit((prevState) => [
-                          ...prevState,
-                          data,
-                        ]);
+                        // as long as it doesn't exist in filePathsToSubmit
+                        if (
+                          !filePathsToSubmit.some(
+                            (f) => f.fullPath === data.fullPath
+                          )
+                        ) {
+                          setFilePathsToSubmit((prevState) => [
+                            ...prevState,
+                            data,
+                          ]);
+                        }
                       }}
                       variant={"outline"}
                     >
@@ -210,21 +247,28 @@ function App() {
                     {data.fullPath}
                   </Button>
                 </TableCell>
+                <TableCell>
+                  <Button
+                    onClick={() => {
+                      addBookmark(data);
+                    }}
+                  >
+                    Bookmark
+                  </Button>
+
+                  <Button
+                    onClick={() => {
+                      removeBookmark(data);
+                    }}
+                  >
+                    Remove
+                  </Button>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </ScrollArea>
-      <div>
-        <Button
-          disabled={prevViewPaths.length === 0}
-          onClick={() => {
-            backNDirs(1);
-          }}
-        >
-          Back Dir
-        </Button>
-      </div>
 
       <label>Prompt</label>
       <Textarea
@@ -235,7 +279,10 @@ function App() {
       <p>Files:</p>
       {filePathsToSubmit.map((file) => {
         return (
-          <p>
+          <p
+            onClick={() => removeFileFromQueue(file)}
+            className="hover:bg-red-200 rounded"
+          >
             {file.name} - {file.fullPath}
           </p>
         );
@@ -246,7 +293,11 @@ function App() {
       <h1> Result:</h1>
       <div className="w-full justify-center flex">
         <ScrollArea className="h-[300px] w-1/2 rounded-md border p-4">
-          {JSON.stringify(gptRequestData, null, 2)}
+          {/* {gptRequestData?.message.content} */}
+          {/* {JSON.stringify(gptRequestData, null, 2)} */}
+          {gptRequestData?.choices.map((choice) => {
+            return <p>{choice.message.content}</p>;
+          })}
         </ScrollArea>
       </div>
     </>

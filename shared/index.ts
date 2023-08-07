@@ -1,4 +1,5 @@
 import { FileDirInfo } from "@u-tools/core/modules/files-factory/files-folder";
+import type { CompletionsResponse } from "@u-tools/core/modules/utils/open-ai-completions-api";
 
 // config variables
 export const ROUTE_VIEW_PATH = "/view-directory";
@@ -12,4 +13,10 @@ export const SERVER_PORT = 8080;
 export type ViewDirectoryResponse = FileDirInfo[];
 export type ViewDirectoryRequest = {
   path: string;
+};
+
+export type SubmitFilesResponse = CompletionsResponse;
+export type SubmitFilesRequest = {
+  files: FileDirInfo[];
+  prompt: string;
 };
