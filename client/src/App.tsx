@@ -98,6 +98,7 @@ function App() {
         <h1>Current Path: {currentViewPath.fullPath}</h1>
         <div className="flex flex-row gap-x-2">
           <Input onChange={(e) => setManualInputDir(e.target.value)}></Input>
+
           <Button
             onClick={() => {
               changeDir({
@@ -159,13 +160,15 @@ function App() {
                   )}
                 </TableCell>
                 <TableCell>
-                  <Button
-                    onClick={() => {
-                      changeDir(fileOrDirData);
-                    }}
-                  >
-                    {fileOrDirData.fullPath}
-                  </Button>
+                  {fileOrDirData.type === 'directory' &&  (
+                    <Button
+                      onClick={() => {
+                        changeDir(fileOrDirData);
+                      }}
+                    >
+                      {fileOrDirData.fullPath} Test
+                    </Button>
+                  )}
                 </TableCell>
                 <TableCell>
                   <Button
@@ -217,6 +220,21 @@ function App() {
             return <p>{choice.message.content}</p>;
           })}
         </ScrollArea>
+        <div>
+          <Button
+            onClick={() => {
+              navigator.clipboard.writeText(
+                gptRequestData?.choices
+                  .map((choice) => {
+                    return choice.message.content;
+                  })
+                  .join("\n")
+              );
+            }}
+          >
+            Copy Content
+          </Button>
+        </div>
       </div>
     </>
   );
