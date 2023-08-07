@@ -1,10 +1,7 @@
 {
-  "name": "server",
+  "name": "shared",
   "module": "index.ts",
   "type": "module",
-  "scripts": {
-    "dev": "bun index.ts"
-  },
   "devDependencies": {
     "bun-types": "latest"
   },
@@ -12,8 +9,6 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
-    "ai": "^2.1.28",
-    "@u-tools/core": "^latest",
-    "openai-edge": "^1.2.2"
+    "@u-tools/core": "^0.0.33"
   }
 }

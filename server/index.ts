@@ -1,24 +1,21 @@
-import { createFileFactory } from "instant-bun/modules/files-factory";
-import { FileDirInfo } from "instant-bun/modules/files-factory/files-folder";
-import { createServerFactory } from "instant-bun/modules/server-factory";
-import { createOpenAICompletions } from "instant-bun/modules/utils/open-ai-completions-api";
+import { createFileFactory } from "@u-tools/core/modules/files-factory";
+import {
+  FileDirInfo,
+  readFilesContents,
+} from "@u-tools/core/modules/files-factory/files-folder";
+import { createServerFactory } from "@u-tools/core/modules/server-factory";
+import { createOpenAICompletions } from "@u-tools/core/modules/utils/open-ai-completions-api";
+import { ROUTE_VIEW_PATH, SERVER_PORT } from "../shared/index";
 
 const serverFactory = createServerFactory({});
 const fileFactory = createFileFactory({ baseDirectory: "~/" });
 
-export const ROUTE_VIEW_DIR = "/view-directory";
-
-// idea: combine adding the server routes,
-// with the view response and request types,
-// then it can be configured on the server factory, it should match
-// similar to what the use-advanced-fetcher.ts does
-export type ViewDirectoryResponse = FileDirInfo[];
-export type ViewDirectoryRequest = {
-  path: string;
-};
+serverFactory.addRoute("/", async (request) => {
+  return new Response("Hello World");
+});
 
 // TODO need to be able to specificy http method
-serverFactory.addRoute(ROUTE_VIEW_DIR, async (request) => {
+serverFactory.addRoute(ROUTE_VIEW_PATH, async (request) => {
   try {
     // const json = await request.json();
     const text = await request.text();
@@ -49,8 +46,6 @@ serverFactory.addRoute(ROUTE_VIEW_DIR, async (request) => {
   }
 });
 
-const port = 8080;
-
 const setCors = (response: Response) => {
   // THIS IS ONLY FOR A DEMO DON'T DO THIS IN PROD IF YOU DON'T KNOW WHAT YOU'RE DOING
   response.headers.set("Access-Control-Allow-Origin", "*");
@@ -61,31 +56,16 @@ const setCors = (response: Response) => {
   response.headers.set("Access-Control-Allow-Headers", "Content-Type");
 };
 
-serverFactory.addRoute("/test", () => {
-  const response = new Response("This is a test route!");
-  setCors(response);
-
-  return response;
-});
-
-try {
-  console.log(`Starting server on port ${port}...`);
-
-  serverFactory.start({ port });
-  console.log(
-    `Server started on port ${port}, press Ctrl+C to stop, http://localhost:${port}`
-  );
-} catch (e) {
-  console.error("Issue starting server: ", e);
-}
-
 const openAiCompletions = createOpenAICompletions({
-  apiKey: "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",
+  apiKey: Bun.env.OPEN_AI_KEY || "",
 });
 
-serverFactory.addRoute("/submit-gpt-files", async (request) => {
+serverFactory.addRoute("/submit-files", async (request) => {
   try {
-    const text = await request.text();
+    // const text = await request.text();
+
+    // if we create the response/request type maps, then we can
+    // we can create a function to handle the request type
 
     const jsonData = (await request.json()) as {
       files: FileDirInfo[];
@@ -97,11 +77,35 @@ serverFactory.addRoute("/submit-gpt-files", async (request) => {
 
     console.log(jsonData);
 
-    const result = await openAiCompletions.getCompletions({
-      prompt: jsonData.prompt,
+    // jsonData.files.forEach(file => {
+    //   // read file content
+
+    // })
+
+    const allFilesContent = await readFilesContents(
+      jsonData.files.map((file) => file.fullPath)
+    );
+
+    console.log({ allFilesContent });
+
+    let promptToSubmit = `
+    ${jsonData.prompt}
+    `;
+
+    allFilesContent?.forEach((file) => {
+      let filePrompt = `
+      ${file.path}:
+      ${file.content}
+    `;
+
+      promptToSubmit += filePrompt;
     });
 
-    const response = new Response(result);
+    const result = await openAiCompletions.getCompletions({
+      prompt: promptToSubmit,
+    });
+
+    const response = new Response(JSON.stringify(result));
 
     setCors(response);
 
@@ -115,3 +119,14 @@ serverFactory.addRoute("/submit-gpt-files", async (request) => {
     });
   }
 });
+
+try {
+  console.log(`Starting server on port ${SERVER_PORT}...`);
+
+  serverFactory.start({ port: SERVER_PORT });
+  console.log(
+    `Server started on port ${SERVER_PORT}, press Ctrl+C to stop, http://localhost:${SERVER_PORT}`
+  );
+} catch (e) {
+  console.error("Issue starting server: ", e);
+}

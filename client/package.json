@@ -4,20 +4,36 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "bun vite",
+    "dev": "bun init.ts && bun vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "shadcn": "bunx shadcn-ui@latest add "
   },
   "dependencies": {
-    "@instant-bun/react-fetcher": "^0.0.5",
-    "instant-bun": "^0.0.25",
+    "@radix-ui/react-popover": "^1.0.6",
+    "@radix-ui/react-scroll-area": "^1.0.4",
+    "@radix-ui/react-select": "^1.2.2",
+    "@radix-ui/react-slot": "^1.0.2",
+    "@radix-ui/react-switch": "^1.0.3",
+    "@radix-ui/react-toggle": "^1.0.3",
+    "@u-tools/core": "^0.0.33",
+    "@u-tools/react": "^0.0.11",
+    "autoprefixer": "^10.4.14",
+    "bun-types": "^0.7.3",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.0.0",
+    "lucide-react": "^0.264.0",
+    "postcss": "^8.4.27",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "tailwind-merge": "^1.14.0",
+    "tailwindcss": "^3.3.3",
+    "tailwindcss-animate": "^1.0.6"
   },
   "devDependencies": {
-    "@types/react": "^18.2.15",
-    "@types/react-dom": "^18.2.7",
-    "@vitejs/plugin-react": "^4.0.3",
-    "vite": "^4.4.5"
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "@vitejs/plugin-react": "^4.0.4",
+    "vite": "^4.4.8"
   }
 }

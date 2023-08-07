@@ -3,6 +3,6 @@
     "dev": "bun start.ts"
   },
   "dependencies": {
-    "@instant-bun/react-fetcher": "^0.0.6"
+    "@u-tools/core": "^0.0.33"
   }
 }
