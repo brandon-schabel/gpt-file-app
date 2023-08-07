@@ -10,12 +10,15 @@
     "shadcn": "bunx shadcn-ui@latest add "
   },
   "dependencies": {
+    "@radix-ui/react-menubar": "^1.0.3",
     "@radix-ui/react-popover": "^1.0.6",
     "@radix-ui/react-scroll-area": "^1.0.4",
     "@radix-ui/react-select": "^1.2.2",
     "@radix-ui/react-slot": "^1.0.2",
     "@radix-ui/react-switch": "^1.0.3",
+    "@radix-ui/react-toast": "^1.1.4",
     "@radix-ui/react-toggle": "^1.0.3",
+    "@radix-ui/react-tooltip": "^1.0.6",
     "@u-tools/core": "^0.0.33",
     "@u-tools/react": "^0.0.14",
     "autoprefixer": "^10.4.14",

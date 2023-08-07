@@ -10,6 +10,7 @@ import { StrictMode } from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import "./index.css";
+import { Toaster } from "./components/ui/toaster";
 
 // const Header = () => {
 //   return (
@@ -78,7 +79,8 @@ if (!rootElement.innerHTML) {
   const root = ReactDOM.createRoot(rootElement);
   root.render(
     <StrictMode>
-      <App />
+      <Toaster />
+        <App />
       {/* <div>Test</div> */}
     </StrictMode>
   );
