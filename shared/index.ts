@@ -20,3 +20,10 @@ export type SubmitFilesRequest = {
   files: FileDirInfo[];
   prompt: string;
 };
+
+
+export const defaultPath: FileDirInfo = {
+  fullPath: "/Users/brandon",
+  name: "Home Dir",
+  type: "directory",
+};

@@ -1,13 +1,5 @@
-import { FileDirInfo } from "@u-tools/core/modules/files-factory/files-folder";
-import { useApiFactory } from "@u-tools/react/use-api-factory";
 import { useLocalStorage } from "@u-tools/react/use-local-storage";
-import { useEffect, useState } from "react";
-import {
-  ROUTE_VIEW_PATH,
-  SubmitFilesRequest,
-  SubmitFilesResponse,
-  ViewDirectoryResponse,
-} from "../../shared";
+import { useState } from "react";
 import "./App.css";
 import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
@@ -22,136 +14,43 @@ import {
   TableRow,
 } from "./components/ui/table";
 import { Textarea } from "./components/ui/textarea";
-
-type GPTFileServerAppEndpoints = {
-  "/submit-files": {
-    body: SubmitFilesRequest;
-    response: SubmitFilesResponse;
-  };
-  [ROUTE_VIEW_PATH]: {
-    body: {
-      path: string;
-    };
-    response: ViewDirectoryResponse;
-  };
-};
+import {
+  useBookmarks,
+  useFileServer,
+  useFileSubmitQueue,
+  usePathControl,
+} from "./hooks";
 
 function App() {
-  const defaultPath: FileDirInfo = {
-    fullPath: "/Users/brandon",
-    name: "Home Dir",
-    type: "directory",
-  };
+  const { addBookmark, bookmarks, removeBookmark } = useBookmarks();
 
-  const [bookmarks, setBookmarks] = useLocalStorage<FileDirInfo[]>({
-    key: "bookmarks",
-    initialState: [],
-  });
-  const [storedCurrentPath, setStoredCurrentPath] =
-    useLocalStorage<FileDirInfo>({
-      key: "currentPath",
-      initialState: defaultPath,
-    });
+  const {
+    currentViewPath,
+    forwardPaths,
+    prevViewPaths,
+    backNDirs,
+    changeDir,
+    forwardNDirs,
+    directoryData,
+  } = usePathControl();
 
-  const result = useApiFactory<GPTFileServerAppEndpoints>({
-    baseUrl: "http://localhost:8080",
-    endpoints: [
-      { endpoint: "/submit-files", method: "post" },
-      { endpoint: "/view-directory", method: "post" },
-    ],
-  });
+  const { useSubmitFilesPaths } = useFileServer();
 
-  const useSubmitFilesPaths = result["/submit-files"];
-  const useViewDirectory = result[ROUTE_VIEW_PATH];
+  const { addFileToQueue, filePathsToSubmit, removeFileFromQueue } =
+    useFileSubmitQueue();
 
-  const { data: viewDirectoryData, post: postViewDirectory } =
-    useViewDirectory();
   const { data: gptRequestData, post: postGptRequest } = useSubmitFilesPaths();
-
-  const [prevViewPaths, setPrevViewPaths] = useLocalStorage<FileDirInfo[]>({
-    key: "prevViewPaths",
-    initialState: [],
-  });
-
-  const [forwardPaths, setForwardPaths] = useLocalStorage<FileDirInfo[]>({
-    key: "forwardPaths",
-    initialState: [],
-  });
-
-  const [currentViewPath, setNewViewPath] = useLocalStorage<FileDirInfo>({
-    key: "currentViewPath",
-    initialState: storedCurrentPath,
-  });
-
-  const [filePathsToSubmit, setFilePathsToSubmit] = useLocalStorage<
-    FileDirInfo[]
-  >({
-    key: "filePathsToSubmit",
-    initialState: [],
-  });
 
   const [prompt, setPrompt] = useLocalStorage<string>({
     key: "prompt",
     initialState: "",
   });
 
-  const addBookmark = (path: FileDirInfo) => {
-    if (!bookmarks.some((b) => b.fullPath === path.fullPath)) {
-      setBookmarks([...bookmarks, path]);
-    }
-  };
-
-  const removeBookmark = (path: FileDirInfo) => {
-    setBookmarks(bookmarks.filter((b) => b.fullPath !== path.fullPath));
-  };
-
-  const removeFileFromQueue = (file: FileDirInfo) => {
-    setFilePathsToSubmit((prevFiles) =>
-      prevFiles.filter((f) => f.fullPath !== file.fullPath)
-    );
-  };
-
   const handleSubmit = async (e: any) => {
     e.preventDefault();
     const result = await postGptRequest({ files: filePathsToSubmit, prompt });
     console.log("result", result);
   };
-
-  const fetchPath = (path: string) => {
-    return postViewDirectory({ path });
-  };
-
-  const changeDir = (fileOrDir: FileDirInfo) => {
-    setPrevViewPaths([...prevViewPaths, currentViewPath]);
-    setForwardPaths([]);
-    setNewViewPath(fileOrDir);
-    setStoredCurrentPath(fileOrDir);
-    fetchPath(fileOrDir.fullPath);
-  };
-
-  const backNDirs = (numDirs: number = 1) => {
-    const prevPath = prevViewPaths[prevViewPaths.length - numDirs];
-    if (prevPath) {
-      setNewViewPath(prevPath);
-      setForwardPaths([currentViewPath, ...forwardPaths]);
-      setPrevViewPaths((prev) => prev.slice(0, -numDirs));
-      fetchPath(prevPath.fullPath);
-    }
-  };
-
-  const forwardNDirs = (numDirs: number = 1) => {
-    const nextPath = forwardPaths[numDirs - 1];
-    if (nextPath) {
-      setNewViewPath(nextPath);
-      setPrevViewPaths([...prevViewPaths, currentViewPath]);
-      setForwardPaths((forward) => forward.slice(numDirs));
-      fetchPath(nextPath.fullPath);
-    }
-  };
-
-  useEffect(() => {
-    fetchPath(storedCurrentPath.fullPath);
-  }, []);
 
   const [manualInputDir, setManualInputDir] = useState("");
 
@@ -212,25 +111,17 @@ function App() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {viewDirectoryData?.map((data) => (
-              <TableRow key={data.fullPath}>
-                <TableCell className="font-medium">{data.name}</TableCell>
-                <TableCell>{data.type}</TableCell>
+            {directoryData?.map((fileOrDirData) => (
+              <TableRow key={fileOrDirData.fullPath}>
+                <TableCell className="font-medium">
+                  {fileOrDirData.name}
+                </TableCell>
+                <TableCell>{fileOrDirData.type}</TableCell>
                 <TableCell>
-                  {data.type === "file" && (
+                  {fileOrDirData.type === "file" && (
                     <Button
                       onClick={() => {
-                        // as long as it doesn't exist in filePathsToSubmit
-                        if (
-                          !filePathsToSubmit.some(
-                            (f) => f.fullPath === data.fullPath
-                          )
-                        ) {
-                          setFilePathsToSubmit((prevState) => [
-                            ...prevState,
-                            data,
-                          ]);
-                        }
+                        addFileToQueue(fileOrDirData);
                       }}
                       variant={"outline"}
                     >
@@ -241,16 +132,16 @@ function App() {
                 <TableCell>
                   <Button
                     onClick={() => {
-                      changeDir(data);
+                      changeDir(fileOrDirData);
                     }}
                   >
-                    {data.fullPath}
+                    {fileOrDirData.fullPath}
                   </Button>
                 </TableCell>
                 <TableCell>
                   <Button
                     onClick={() => {
-                      addBookmark(data);
+                      addBookmark(fileOrDirData);
                     }}
                   >
                     Bookmark
@@ -258,7 +149,7 @@ function App() {
 
                   <Button
                     onClick={() => {
-                      removeBookmark(data);
+                      removeBookmark(fileOrDirData);
                     }}
                   >
                     Remove
@@ -293,8 +184,6 @@ function App() {
       <h1> Result:</h1>
       <div className="w-full justify-center flex">
         <ScrollArea className="h-[300px] w-1/2 rounded-md border p-4">
-          {/* {gptRequestData?.message.content} */}
-          {/* {JSON.stringify(gptRequestData, null, 2)} */}
           {gptRequestData?.choices.map((choice) => {
             return <p>{choice.message.content}</p>;
           })}
