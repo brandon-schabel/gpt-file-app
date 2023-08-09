@@ -9,8 +9,9 @@
 import { StrictMode } from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
-import "./index.css";
+import { AppContextProvider } from "./app-context";
 import { Toaster } from "./components/ui/toaster";
+import "./index.css";
 
 // const Header = () => {
 //   return (
@@ -79,9 +80,10 @@ if (!rootElement.innerHTML) {
   const root = ReactDOM.createRoot(rootElement);
   root.render(
     <StrictMode>
-      <Toaster />
+      <AppContextProvider>
+        <Toaster />
         <App />
-      {/* <div>Test</div> */}
+      </AppContextProvider>
     </StrictMode>
   );
 }

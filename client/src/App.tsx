@@ -10,14 +10,9 @@ import { ScrollArea } from "./components/ui/scroll-area";
 
 import { Textarea } from "./components/ui/textarea";
 
+import { useAppContext } from "./app-context";
 import { NavBar } from "./components/ui/app-navbar";
-import { OldTable } from "./components/ui/old-table";
-import {
-  useBookmarks,
-  useFileSubmitQueue,
-  usePathControl,
-  useServer,
-} from "./hooks";
+import { FileFolderTable } from "./components/ui/file-folder-table";
 
 const defaultModels: ComboOption[] = [
   {
@@ -47,23 +42,25 @@ const defaultModels: ComboOption[] = [
 ];
 
 function App() {
-  const { addBookmark, bookmarks, removeBookmark } = useBookmarks();
+  const {
+    bookmarks: { addBookmark, bookmarks, removeBookmark },
+    fileSubmitQueue: { addFileToQueue, filePathsToSubmit, removeFileFromQueue },
+    pathControl: {
+      backNDirs,
+      changeDir,
+      currentViewPath,
+      directoryData,
+      forwardNDirs,
+      forwardPaths,
+      prevViewPaths,
+    },
+    server: { useListModels, useSubmitFilesPaths },
+  } = useAppContext();
   const [editBookmarkToggle, setEditBookmarkToggle] = useLocalStorage({
     key: "bookMarkToggle",
     initialState: false,
   });
 
-  const {
-    currentViewPath,
-    forwardPaths,
-    prevViewPaths,
-    backNDirs,
-    changeDir,
-    forwardNDirs,
-    directoryData,
-  } = usePathControl();
-
-  const { useSubmitFilesPaths, useListModels } = useServer();
   const [selectedModel, setSelectedModel] = useLocalStorage({
     key: "selectedModel",
     initialState: "gpt-3.5-turbo",
@@ -72,9 +69,6 @@ function App() {
   useEffect(() => {
     getModels();
   }, []);
-
-  const { addFileToQueue, filePathsToSubmit, removeFileFromQueue } =
-    useFileSubmitQueue();
 
   const { data: gptRequestData, post: postGptRequest } = useSubmitFilesPaths();
 
@@ -181,15 +175,9 @@ function App() {
           </div>
         </div>
       </div>
-      <ScrollArea className="h-[calc(100vh-128px)] w-full shadow-md border-2 rounded"></ScrollArea>
-      <OldTable
-        addBookmark={addBookmark}
-        addFileToQueue={addFileToQueue}
-        bookmarks={bookmarks}
-        changeDir={changeDir}
-        directoryData={directoryData}
-        filePathsToSubmit={filePathsToSubmit}
-      />
+      <ScrollArea className="h-[calc(100vh-128px)] w-full shadow-md border-2 rounded">
+        <FileFolderTable directoryData={directoryData} />
+      </ScrollArea>
 
       <div className="my-8">
         <label className="text-lg ">Prompt</label>

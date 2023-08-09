@@ -69,6 +69,12 @@ export const useServer = () => {
     ],
   });
 
+  console.log({
+    'useSubmitFilesPaths': fileServer["/submit-files"],
+    'useViewDirectory': fileServer["/view-directory"],
+    'useListModels': fileServer["/get-models"],
+  })
+
   return {
     useSubmitFilesPaths: fileServer["/submit-files"],
     useViewDirectory: fileServer["/view-directory"],

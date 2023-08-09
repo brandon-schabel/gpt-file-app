@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  CaretSortIcon,
-  ChevronDownIcon,
-  DotsHorizontalIcon,
-} from "@radix-ui/react-icons";
+import { ChevronDownIcon, DotsHorizontalIcon } from "@radix-ui/react-icons";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -17,10 +13,9 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import * as React from "react";
 
+import { useAppContext } from "@/app-context";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -40,29 +35,31 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { FileDirInfo } from "@u-tools/core/modules/files-factory/files-folder";
-
-const defaultData: FileDirInfo[] = [];
+import { useClipboard } from "@u-tools/react";
+import { FileIcon, FolderIcon } from "lucide-react";
+import { useState } from "react";
+import { TableCellTooltip } from "./table-cell-tooltip";
 
 export const columns: ColumnDef<FileDirInfo>[] = [
-  {
-    id: "select",
-    header: ({ table }) => (
-      <Checkbox
-        checked={table.getIsAllPageRowsSelected()}
-        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label="Select all"
-      />
-    ),
-    cell: ({ row }) => (
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label="Select row"
-      />
-    ),
-    enableSorting: false,
-    enableHiding: false,
-  },
+  //   {
+  //     id: "select",
+  //     header: ({ table }) => (
+  //       <Checkbox
+  //         checked={table.getIsAllPageRowsSelected()}
+  //         onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+  //         aria-label="Select all"
+  //       />
+  //     ),
+  //     cell: ({ row }) => (
+  //       <Checkbox
+  //         checked={row.getIsSelected()}
+  //         onCheckedChange={(value) => row.toggleSelected(!!value)}
+  //         aria-label="Select row"
+  //       />
+  //     ),
+  //     enableSorting: false,
+  //     enableHiding: false,
+  //   },
   {
     accessorKey: "name",
     header: "Item Name",
@@ -71,40 +68,36 @@ export const columns: ColumnDef<FileDirInfo>[] = [
     ),
   },
   {
-    accessorKey: "email",
-    header: ({ column }) => {
+    id: "add-action",
+    cell: ({ row }) => {
+      const fileOrDirData = row.original;
+
+      const {
+        fileSubmitQueue: { addFileToQueue },
+      } = useAppContext();
+
       return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Email
-          <CaretSortIcon className="ml-2 h-4 w-4" />
-        </Button>
+        <div className="flex w-full justify-start">
+          {fileOrDirData.type === "file" && (
+            <Button
+              onClick={() => {
+                addFileToQueue(fileOrDirData);
+              }}
+              variant={"outline"}
+            >
+              <span className="font-bold text-lg">+</span>
+            </Button>
+          )}
+        </div>
       );
     },
-    cell: ({ row }) => <div className="lowercase">{row.getValue("email")}</div>,
   },
   {
-    accessorKey: "amount",
-    header: () => <div className="text-right">Amount</div>,
-    cell: ({ row }) => {
-      const amount = parseFloat(row.getValue("amount"));
-
-      // Format the amount as a dollar amount
-      const formatted = new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "USD",
-      }).format(amount);
-
-      return <div className="text-right font-medium">{formatted}</div>;
-    },
-  },
-  {
-    id: "actions",
+    id: "bookmark-action",
     enableHiding: false,
     cell: ({ row }) => {
-      const payment = row.original;
+      const fileOrDirData = row.original;
+      const { setClipboard } = useClipboard();
 
       return (
         <DropdownMenu>
@@ -117,13 +110,11 @@ export const columns: ColumnDef<FileDirInfo>[] = [
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(payment.id)}
+              onClick={() => setClipboard(fileOrDirData.fullPath)}
             >
-              Copy payment ID
+              Copy Path
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>View customer</DropdownMenuItem>
-            <DropdownMenuItem>View payment details</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       );
@@ -131,17 +122,23 @@ export const columns: ColumnDef<FileDirInfo>[] = [
   },
 ];
 
-export function DataTableDemo() {
-  const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    []
-  );
-  const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({});
-  const [rowSelection, setRowSelection] = React.useState({});
+export function FileFolderTable({
+  directoryData,
+}: {
+  directoryData: FileDirInfo[] | null;
+}) {
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [rowSelection, setRowSelection] = useState({});
+  const { setClipboard } = useClipboard();
+
+  // console.log({
+
+  // })
 
   const table = useReactTable({
-    data: defaultData,
+    data: directoryData || [],
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -163,10 +160,10 @@ export function DataTableDemo() {
     <div className="w-full">
       <div className="flex items-center py-4">
         <Input
-          placeholder="Filter emails..."
-          value={(table.getColumn("email")?.getFilterValue() as string) ?? ""}
-          onChange={(event) =>
-            table.getColumn("email")?.setFilterValue(event.target.value)
+          placeholder="Filter directory...(non recursive)"
+          value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
+          onChange={(event: any) =>
+            table.getColumn("name")?.setFilterValue(event.target?.value)
           }
           className="max-w-sm"
         />
@@ -226,6 +223,7 @@ export function DataTableDemo() {
                     data-state={row.getIsSelected() && "selected"}
                   >
                     {row.getVisibleCells().map((cell) => {
+                      // TODO maybe add clipboard to context and then you can keep clipboard history as well
                       const cellCtx = cell.getContext();
                       cellCtx.column.id;
 
@@ -235,7 +233,7 @@ export function DataTableDemo() {
                         cellCtx.column.id
                       );
 
-                      const { fullPath , name,type} = row.original;
+                      const { fullPath, name, type } = row.original;
 
                       if (istTooltipColumn) {
                         return (
@@ -244,7 +242,7 @@ export function DataTableDemo() {
                             tooltipContent={fullPath}
                             onTooltipContentClick={() => {
                               // copy path to clipboard
-                              navigator.clipboard.writeText(fullPath);
+                              setClipboard(fullPath);
                             }}
                             toastOptions={{
                               description: fullPath,
