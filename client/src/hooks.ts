@@ -1,12 +1,16 @@
 import { FileDirInfo } from "@u-tools/core/modules/files-factory/files-folder";
+import {
+  ModelInfo,
+  ModelsListResponse,
+} from "@u-tools/core/modules/utils/open-ai-completions-api";
 import { useApiFactory } from "@u-tools/react/use-api-factory";
 import { useLocalStorage } from "@u-tools/react/use-local-storage";
 import { useEffect } from "react";
 import {
-    SubmitFilesRequest,
-    SubmitFilesResponse,
-    ViewDirectoryResponse,
-    defaultPath,
+  SubmitFilesRequest,
+  SubmitFilesResponse,
+  ViewDirectoryResponse,
+  defaultPath,
 } from "../../shared";
 
 type GPTFileServerAppEndpoints = {
@@ -19,6 +23,15 @@ type GPTFileServerAppEndpoints = {
       path: string;
     };
     response: ViewDirectoryResponse;
+  };
+  "/get-models": {
+    response: ModelsListResponse;
+  };
+  "/get-model": {
+    response: ModelInfo;
+    params: {
+      modelId: string;
+    };
   };
 };
 
@@ -45,23 +58,26 @@ export const useBookmarks = () => {
   };
 };
 
-export const useFileServer = () => {
+export const useServer = () => {
   const fileServer = useApiFactory<GPTFileServerAppEndpoints>({
     baseUrl: "http://localhost:8080",
     endpoints: [
       { endpoint: "/submit-files", method: "post" },
       { endpoint: "/view-directory", method: "post" },
+      { endpoint: "/get-models", method: "get" },
+      { endpoint: "/get-model", method: "get" },
     ],
   });
 
   return {
     useSubmitFilesPaths: fileServer["/submit-files"],
     useViewDirectory: fileServer["/view-directory"],
+    useListModels: fileServer["/get-models"],
   };
 };
 
 export const usePathControl = () => {
-  const { useViewDirectory } = useFileServer();
+  const { useViewDirectory } = useServer();
   const { data: directoryData, post: postViewDirectory } = useViewDirectory();
   const [prevViewPaths, setPrevViewPaths] = useLocalStorage<FileDirInfo[]>({
     key: "prevViewPaths",

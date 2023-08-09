@@ -1,94 +1,50 @@
 import { useLocalStorage } from "@u-tools/react/use-local-storage";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
-import { ComponentProps, ReactNode, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import "./App.css";
 import { Button } from "./components/ui/button";
+import { ComboOption, Combobox } from "./components/ui/combobox";
 import { Input } from "./components/ui/input";
-import {
-  Menubar,
-  MenubarCheckboxItem,
-  MenubarContent,
-  MenubarItem,
-  MenubarMenu,
-  MenubarTrigger,
-} from "./components/ui/menubar";
+
 import { ScrollArea } from "./components/ui/scroll-area";
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "./components/ui/table";
+
 import { Textarea } from "./components/ui/textarea";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "./components/ui/tooltip";
-import { useToast } from "./components/ui/use-toast";
+
+import { NavBar } from "./components/ui/app-navbar";
+import { OldTable } from "./components/ui/old-table";
 import {
   useBookmarks,
-  useFileServer,
   useFileSubmitQueue,
   usePathControl,
+  useServer,
 } from "./hooks";
 
-type BtnProps = ComponentProps<"button">;
-
-const TableCellTooltip = ({
-  children,
-  onClick,
-  className,
-  tooltipContent,
-  onTooltipContentClick,
-  toastOptions,
-}: {
-  children: ReactNode;
-  onClick?: BtnProps["onClick"];
-  className?: string;
-  tooltipContent: ReactNode;
-  onTooltipContentClick?: BtnProps["onClick"];
-  toastOptions: {
-    title: string;
-    description: string;
-    toastAction?: ReactNode;
-  };
-}) => {
-  const [tooltipOpen, setTooltipOpen] = useState(false);
-  const { toast } = useToast();
-
-  return (
-    <TooltipProvider>
-      <Tooltip onOpenChange={setTooltipOpen} open={tooltipOpen}>
-        <TooltipTrigger>
-          <TableCell className={className} onClick={onClick}>
-            {children}
-          </TableCell>
-        </TooltipTrigger>
-        {tooltipContent && (
-          <TooltipContent
-            className="hover:cursor-pointer hover:bg-zinc-300"
-            onClick={(event) => {
-              if (onTooltipContentClick) {
-                onTooltipContentClick(event);
-              }
-
-              if (toastOptions) {
-                toast(toastOptions);
-              }
-            }}
-          >
-            {tooltipContent}
-          </TooltipContent>
-        )}
-      </Tooltip>
-    </TooltipProvider>
-  );
-};
+const defaultModels: ComboOption[] = [
+  {
+    label: "gpt-3.5-turbo-16k-0613",
+    value: "gpt-3.5-turbo-16k-0613",
+  },
+  {
+    label: "gpt-3.5-turbo-16k",
+    value: "gpt-3.5-turbo-16k",
+  },
+  {
+    label: "gpt-3.5-turbo",
+    value: "gpt-3.5-turbo",
+  },
+  {
+    label: "gpt-3.5-turbo-0301",
+    value: "gpt-3.5-turbo-0301",
+  },
+  {
+    label: "gpt-3.5-turbo-0613",
+    value: "gpt-3.5-turbo-0613",
+  },
+  {
+    label: "gpt-4",
+    value: "gpt-4",
+  },
+];
 
 function App() {
   const { addBookmark, bookmarks, removeBookmark } = useBookmarks();
@@ -107,7 +63,15 @@ function App() {
     directoryData,
   } = usePathControl();
 
-  const { useSubmitFilesPaths } = useFileServer();
+  const { useSubmitFilesPaths, useListModels } = useServer();
+  const [selectedModel, setSelectedModel] = useLocalStorage({
+    key: "selectedModel",
+    initialState: "gpt-3.5-turbo",
+  });
+  const { get: getModels, data: modelList } = useListModels();
+  useEffect(() => {
+    getModels();
+  }, []);
 
   const { addFileToQueue, filePathsToSubmit, removeFileFromQueue } =
     useFileSubmitQueue();
@@ -121,51 +85,38 @@ function App() {
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
-    const result = await postGptRequest({ files: filePathsToSubmit, prompt });
+    const result = await postGptRequest({
+      files: filePathsToSubmit,
+      prompt,
+      model: selectedModel,
+    });
     console.log("result", result);
   };
 
   const [manualInputDir, setManualInputDir] = useState("");
 
-  const NavBar = () => {
+  const modelOptions = useMemo((): ComboOption[] => {
     return (
-      <Menubar>
-        <MenubarMenu>
-          <MenubarTrigger>File</MenubarTrigger>
-          <MenubarContent>
-            <MenubarItem>
-              <MenubarCheckboxItem
-                onCheckedChange={setEditBookmarkToggle}
-                checked={editBookmarkToggle}
-              >
-                Edit Bookmarks
-              </MenubarCheckboxItem>
-            </MenubarItem>
-          </MenubarContent>
-        </MenubarMenu>
-        <MenubarMenu>
-          <MenubarTrigger>Bookmarks</MenubarTrigger>
-          <MenubarContent>
-            {bookmarks.map((bookmark) => {
-              return (
-                <MenubarItem
-                  key={bookmark.fullPath}
-                  onClick={() => changeDir(bookmark)}
-                >
-                  {bookmark.name}
-                </MenubarItem>
-              );
-            })}
-          </MenubarContent>
-        </MenubarMenu>
-      </Menubar>
+      modelList?.data.map((item) => {
+        return {
+          label: item.id,
+          value: item.id,
+        };
+      }) || []
     );
-  };
+  }, [modelList]);
 
   return (
     <>
       <div className="w-full flex flex-col justify-center gap-y-4">
-        <NavBar />
+        <div className="fixed flex top-0 left-0 w-100vw z-10">
+          <NavBar
+            bookmarks={bookmarks}
+            changeDir={changeDir}
+            editBookmarkToggle={editBookmarkToggle}
+            setEditBookmarkToggle={setEditBookmarkToggle}
+          />
+        </div>
 
         {/* move to modal */}
         {editBookmarkToggle && (
@@ -230,79 +181,15 @@ function App() {
           </div>
         </div>
       </div>
-      <ScrollArea className="h-[calc(100vh-128px)] w-full shadow-md border-2 rounded">
-        <Table>
-          <TableCaption>Files</TableCaption>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[100px] text-left">Name</TableHead>
-              {/* <TableHead>File Type</TableHead> */}
-              <TableHead className="text-left">Add</TableHead>
-              {/* <TableHead>Full Path</TableHead> */}
-              <TableHead className="text-left">Bookmark</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {directoryData?.map((fileOrDirData) => (
-              <TableRow key={fileOrDirData.fullPath}>
-                <TableCellTooltip
-                  className="font-medium justify-start text-left items-center"
-                  tooltipContent={fileOrDirData.fullPath}
-                  onTooltipContentClick={() => {
-                    // copy path to clipboard
-                    navigator.clipboard.writeText(fileOrDirData.fullPath);
-                  }}
-                  toastOptions={{
-                    description: fileOrDirData.fullPath,
-                    title: "Copied Path",
-                  }}
-                >
-                  <div className="flex w-32 justify-start text-left">
-                    {fileOrDirData.type === "directory" ? (
-                      <Button
-                        onClick={() => {
-                          changeDir(fileOrDirData);
-                        }}
-                      >
-                        {fileOrDirData.name}
-                      </Button>
-                    ) : (
-                      fileOrDirData.name
-                    )}
-                  </div>
-                </TableCellTooltip>
-                <TableCell className="text-left">
-                  <div className="flex w-full justify-start">
-                    {fileOrDirData.type === "file" && (
-                      <Button
-                        onClick={() => {
-                          addFileToQueue(fileOrDirData);
-                        }}
-                        variant={"outline"}
-                      >
-                        <span className="font-bold text-lg">+</span>
-                      </Button>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex w-full justify-start gap-x-2">
-                    <Button
-                      onClick={() => {
-                        addBookmark(fileOrDirData);
-                      }}
-                      variant={"outline"}
-                      className="w-24 rounded-3xl text-xs"
-                    >
-                      Bookmark
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </ScrollArea>
+      <ScrollArea className="h-[calc(100vh-128px)] w-full shadow-md border-2 rounded"></ScrollArea>
+      <OldTable
+        addBookmark={addBookmark}
+        addFileToQueue={addFileToQueue}
+        bookmarks={bookmarks}
+        changeDir={changeDir}
+        directoryData={directoryData}
+        filePathsToSubmit={filePathsToSubmit}
+      />
 
       <div className="my-8">
         <label className="text-lg ">Prompt</label>
@@ -328,11 +215,17 @@ function App() {
           );
         })}
       </div>
+      <Combobox
+        options={defaultModels}
+        value={selectedModel}
+        onValueChange={setSelectedModel}
+      />
+
       <div className="w-full justify-center">
         <Button
           onClick={handleSubmit}
           variant={"ghost"}
-          className="w-32 bg-blue-400  "
+          className="w-32 bg-blue-400"
         >
           Submit
         </Button>
@@ -340,7 +233,7 @@ function App() {
       <h1 className="font-bold">Output:</h1>
 
       <div className="w-full justify-center items-center flex flex-col">
-        <ScrollArea className="h-[300px] w-1/2 rounded-md border p-4">
+        <ScrollArea className="h-[300px] w-full rounded-md border p-4 text-left">
           {gptRequestData?.choices.map((choice) => {
             return <p>{choice.message.content}</p>;
           })}

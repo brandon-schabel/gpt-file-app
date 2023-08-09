@@ -3,6 +3,7 @@
     "dev": "bun start.ts"
   },
   "dependencies": {
-    "@u-tools/core": "^0.0.33"
+    "@tanstack/react-table": "^8.9.3",
+    "@u-tools/core": "0.0.35"
   }
 }

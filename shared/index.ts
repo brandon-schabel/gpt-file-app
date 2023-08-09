@@ -19,8 +19,8 @@ export type SubmitFilesResponse = CompletionsResponse;
 export type SubmitFilesRequest = {
   files: FileDirInfo[];
   prompt: string;
+  model: string;
 };
-
 
 export const defaultPath: FileDirInfo = {
   fullPath: "/Users/brandon",

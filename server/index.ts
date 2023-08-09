@@ -5,7 +5,7 @@ import {
 } from "@u-tools/core/modules/files-factory/files-folder";
 import { createServerFactory } from "@u-tools/core/modules/server-factory";
 import { createOpenAICompletions } from "@u-tools/core/modules/utils/open-ai-completions-api";
-import { ROUTE_VIEW_PATH, SERVER_PORT } from "../shared/index";
+import { ROUTE_VIEW_PATH, SERVER_PORT } from "../shared";
 
 const serverFactory = createServerFactory({});
 const fileFactory = createFileFactory({ baseDirectory: "~/" });
@@ -14,6 +14,7 @@ serverFactory.addRoute("/", async (request) => {
   return new Response("Hello World");
 });
 
+// TODO: do an object based route config instead of the serverFactory add route
 // TODO need to be able to specificy http method
 serverFactory.addRoute(ROUTE_VIEW_PATH, async (request) => {
   try {
@@ -70,6 +71,7 @@ serverFactory.addRoute("/submit-files", async (request) => {
     const jsonData = (await request.json()) as {
       files: FileDirInfo[];
       prompt: string;
+      model: string;
     };
     // const bodyData = request.body;
 
@@ -103,6 +105,8 @@ serverFactory.addRoute("/submit-files", async (request) => {
 
     const result = await openAiCompletions.getCompletions({
       prompt: promptToSubmit,
+      model: jsonData.model,
+      // model: "gpt-4",
     });
 
     const response = new Response(JSON.stringify(result));
@@ -112,6 +116,46 @@ serverFactory.addRoute("/submit-files", async (request) => {
     return response;
   } catch (e) {
     // throw
+    console.error(e);
+    return new Response("Failed", {
+      status: 500,
+      statusText: `Pooped the bed: ${JSON.stringify(e)}`,
+    });
+  }
+});
+
+serverFactory.addRoute("/get-models", async () => {
+  try {
+    const models = await openAiCompletions.listModels();
+    const response = new Response(JSON.stringify(models));
+    setCors(response);
+    return response;
+  } catch (e) {
+    console.error(e);
+    return new Response("Failed", {
+      status: 500,
+      statusText: `Pooped the bed: ${JSON.stringify(e)}`,
+    });
+  }
+});
+
+serverFactory.addRoute("/get-model", async (request) => {
+  const url = new URLSearchParams(request.url);
+  const modelId = url.get("modelId");
+
+  if (!modelId) {
+    return new Response("Failed", {
+      status: 500,
+      statusText: `No modelId`,
+    });
+  }
+
+  try {
+    const model = await openAiCompletions.retrieveModel(modelId);
+    const response = new Response(JSON.stringify(model));
+    setCors(response);
+    return response;
+  } catch (e) {
     console.error(e);
     return new Response("Failed", {
       status: 500,
