@@ -30,3 +30,15 @@ in both the server and client directories:
 `bun run dev`
 
 You'll need to configure a OPEN_AI_KEY in a .env in the server folder.
+
+Screenshots:
+<img width="1440" alt="Screenshot 2023-08-07 at 10 03 54 AM" src="https://github.com/brandon-schabel/gpt-file-app/assets/18100375/3c2f501f-bf60-4e66-bffd-03e66a8aec45">
+
+<img width="1012" alt="Screenshot 2023-08-07 at 10 03 40 AM" src="https://github.com/brandon-schabel/gpt-file-app/assets/18100375/62702ffc-b825-4e76-8d3f-2fd28e660069">
+
+<img width="1327" alt="Screenshot 2023-08-07 at 9 59 28 AM" src="https://github.com/brandon-schabel/gpt-file-app/assets/18100375/f4a4d34b-2260-44a2-bfb0-910c55b40dea">
+
+
+
+
+
