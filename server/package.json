@@ -3,7 +3,7 @@
   "module": "index.ts",
   "type": "module",
   "scripts": {
-    "dev": "bun index.ts"
+    "dev": "lsof -ti :5173 | xargs kill && bun index.ts"
   },
   "devDependencies": {
     "bun-types": "latest"

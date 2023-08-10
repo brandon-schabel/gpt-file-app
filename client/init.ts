@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import tailwindConfig from "./tailwind.config";
-export const initHTML = `
+
+export const initHTML = /*html */ `
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -23,10 +24,8 @@ export const initHTML = `
 
 // write to index.html file
 export const writeInitHTML = (html: string) => {
-  
   // write index.html
   fs.writeFileSync("index.html", html);
 };
-
 
 writeInitHTML(initHTML);

@@ -4,7 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "bun init.ts && bun vite",
+    "dev:link": "bun link @u-tools/core @u-tools/react && bun run dev",
+    "dev": "lsof -ti :5173 | xargs kill && bun init.ts && bun vite",
     "build": "vite build",
     "preview": "vite preview",
     "shadcn": "bunx shadcn-ui@latest add "
@@ -24,8 +25,8 @@
     "@radix-ui/react-toggle": "^1.0.3",
     "@radix-ui/react-tooltip": "^1.0.6",
     "@tanstack/react-table": "^8.9.3",
-    "@u-tools/core": "0.0.35",
-    "@u-tools/react": "^0.0.14",
+    "@u-tools/core": "0.0.37",
+    "@u-tools/react": "0.0.18",
     "autoprefixer": "^10.4.14",
     "bun-types": "^0.7.3",
     "class-variance-authority": "^0.7.0",

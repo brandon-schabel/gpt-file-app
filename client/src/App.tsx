@@ -10,6 +10,8 @@ import { ScrollArea } from "./components/ui/scroll-area";
 
 import { Textarea } from "./components/ui/textarea";
 
+import { useClipboard } from "@u-tools/react";
+import { defaultPath } from "../../shared";
 import { useAppContext } from "./app-context";
 import { NavBar } from "./components/ui/app-navbar";
 import { FileFolderTable } from "./components/ui/file-folder-table";
@@ -43,25 +45,28 @@ const defaultModels: ComboOption[] = [
 
 function App() {
   const {
-    bookmarks: { addBookmark, bookmarks, removeBookmark },
-    fileSubmitQueue: { addFileToQueue, filePathsToSubmit, removeFileFromQueue },
+    bookmarks: { bookmarks = [], removeBookmark },
+    fileSubmitQueue: { filePathsToSubmit = [], removeFileFromQueue },
     pathControl: {
       backNDirs,
       changeDir,
-      currentViewPath,
-      directoryData,
+      currentViewPath = defaultPath,
+      directoryData = [],
       forwardNDirs,
-      forwardPaths,
-      prevViewPaths,
+      forwardPaths = [],
+      prevViewPaths = [],
     },
     server: { useListModels, useSubmitFilesPaths },
   } = useAppContext();
-  const [editBookmarkToggle, setEditBookmarkToggle] = useLocalStorage({
-    key: "bookMarkToggle",
-    initialState: false,
-  });
 
-  const [selectedModel, setSelectedModel] = useLocalStorage({
+  const { setClipboard } = useClipboard();
+  const { state: editBookmarkToggle, setState: setEditBookmarkToggle } =
+    useLocalStorage({
+      key: "bookMarkToggle",
+      initialState: false,
+    });
+
+  const { state: selectedModel, set: setSelectedModel } = useLocalStorage({
     key: "selectedModel",
     initialState: "gpt-3.5-turbo",
   });
@@ -72,7 +77,7 @@ function App() {
 
   const { data: gptRequestData, post: postGptRequest } = useSubmitFilesPaths();
 
-  const [prompt, setPrompt] = useLocalStorage<string>({
+  const { state: prompt, set: setPrompt } = useLocalStorage<string>({
     key: "prompt",
     initialState: "",
   });
@@ -84,7 +89,6 @@ function App() {
       prompt,
       model: selectedModel,
     });
-    console.log("result", result);
   };
 
   const [manualInputDir, setManualInputDir] = useState("");
@@ -141,7 +145,7 @@ function App() {
           </div>
         )}
 
-        <h1>Current Path: {currentViewPath.fullPath}</h1>
+        {currentViewPath && <h1>Current Path: {currentViewPath.fullPath}</h1>}
 
         <div className="flex flex-row gap-x-2 flex-start mb-2 w-full">
           <Button
@@ -158,7 +162,9 @@ function App() {
           </Button>
 
           <div className="flex flex-row gap-x-2">
-            <Input onChange={(e) => setManualInputDir(e.target.value)}></Input>
+            <Input
+              onChange={(e: any) => setManualInputDir(e.target.value)}
+            ></Input>
 
             <Button
               onClick={() => {
@@ -166,6 +172,8 @@ function App() {
                   fullPath: manualInputDir,
                   name: "Manual Input",
                   type: "directory",
+                  extension: "",
+                  size: 0,
                 });
               }}
               className="w-40"
@@ -183,7 +191,7 @@ function App() {
         <label className="text-lg ">Prompt</label>
       </div>
       <Textarea
-        onChange={(e) => setPrompt(e.target?.value as any)}
+        onChange={(e: any) => setPrompt(e.target?.values)}
         value={prompt}
         placeholder="Additional Prompt"
       ></Textarea>
@@ -229,12 +237,12 @@ function App() {
         <div>
           <Button
             onClick={() => {
-              navigator.clipboard.writeText(
+              setClipboard(
                 gptRequestData?.choices
                   .map((choice) => {
                     return choice.message.content;
                   })
-                  .join("\n")
+                  .join("\n") || ""
               );
             }}
             className="mt-2"

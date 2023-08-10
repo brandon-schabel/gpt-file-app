@@ -36,7 +36,9 @@ type GPTFileServerAppEndpoints = {
 };
 
 export const useBookmarks = () => {
-  const [bookmarks, setBookmarks] = useLocalStorage<FileDirInfo[]>({
+  const { state: bookmarks, set: setBookmarks } = useLocalStorage<
+    FileDirInfo[]
+  >({
     key: "bookmarks",
     initialState: [],
   });
@@ -69,12 +71,6 @@ export const useServer = () => {
     ],
   });
 
-  console.log({
-    'useSubmitFilesPaths': fileServer["/submit-files"],
-    'useViewDirectory': fileServer["/view-directory"],
-    'useListModels': fileServer["/get-models"],
-  })
-
   return {
     useSubmitFilesPaths: fileServer["/submit-files"],
     useViewDirectory: fileServer["/view-directory"],
@@ -85,34 +81,41 @@ export const useServer = () => {
 export const usePathControl = () => {
   const { useViewDirectory } = useServer();
   const { data: directoryData, post: postViewDirectory } = useViewDirectory();
-  const [prevViewPaths, setPrevViewPaths] = useLocalStorage<FileDirInfo[]>({
+  const { state: prevViewPaths, set: setPrevViewPaths } = useLocalStorage<
+    FileDirInfo[]
+  >({
     key: "prevViewPaths",
     initialState: [],
   });
 
-  const [forwardPaths, setForwardPaths] = useLocalStorage<FileDirInfo[]>({
+  const { state: forwardPaths, set: setForwardPaths } = useLocalStorage<
+    FileDirInfo[]
+  >({
     key: "forwardPaths",
     initialState: [],
   });
 
-  const [storedCurrentPath, setStoredCurrentPath] =
+  const { state: storedCurrentPath, set: setStoredCurrentPath } =
     useLocalStorage<FileDirInfo>({
       key: "currentPath",
       initialState: defaultPath,
     });
 
-  const [currentViewPath, setNewViewPath] = useLocalStorage<FileDirInfo>({
-    key: "currentViewPath",
-    initialState: storedCurrentPath,
-  });
+  const { state: currentViewPath, set: setNewViewPath } =
+    useLocalStorage<FileDirInfo>({
+      key: "currentViewPath",
+      initialState: defaultPath,
+    });
 
   const fetchPath = (path: string) => {
     return postViewDirectory({ path });
   };
 
   useEffect(() => {
-    fetchPath(storedCurrentPath.fullPath);
-  }, []);
+    if (storedCurrentPath?.fullPath) {
+      fetchPath(storedCurrentPath.fullPath);
+    }
+  }, [storedCurrentPath?.fullPath]);
 
   const changeDir = (fileOrDir: FileDirInfo) => {
     setPrevViewPaths([...prevViewPaths, currentViewPath]);
@@ -155,12 +158,11 @@ export const usePathControl = () => {
 };
 
 export const useFileSubmitQueue = () => {
-  const [filePathsToSubmit, setFilePathsToSubmit] = useLocalStorage<
-    FileDirInfo[]
-  >({
-    key: "filePathsToSubmit",
-    initialState: [],
-  });
+  const { state: filePathsToSubmit, set: setFilePathsToSubmit } =
+    useLocalStorage<FileDirInfo[]>({
+      key: "filePathsToSubmit",
+      initialState: [],
+    });
 
   const removeFileFromQueue = (file: FileDirInfo) => {
     setFilePathsToSubmit((prevFiles) =>

@@ -1,6 +1,10 @@
 "use client";
 
-import { ChevronDownIcon, DotsHorizontalIcon } from "@radix-ui/react-icons";
+import {
+  ChevronDownIcon,
+  DotsHorizontalIcon,
+  FileIcon,
+} from "@radix-ui/react-icons";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -36,11 +40,46 @@ import {
 } from "@/components/ui/table";
 import { FileDirInfo } from "@u-tools/core/modules/files-factory/files-folder";
 import { useClipboard } from "@u-tools/react";
-import { FileIcon, FolderIcon } from "lucide-react";
-import { useState } from "react";
+import {
+  ArrowUpDown,
+  BookmarkMinusIcon,
+  BookmarkPlusIcon,
+  CopyCheckIcon,
+  CopyIcon,
+  FolderIcon,
+} from "lucide-react";
+import {
+  ComponentProps,
+  ReactNode,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { TableCellTooltip } from "./table-cell-tooltip";
+import { useToast } from "./use-toast";
+
+type BtnProps = ComponentProps<"button">;
+
+const SortBtn = ({
+  children,
+  onClick,
+}: {
+  onClick?: BtnProps["onClick"];
+  children?: ReactNode;
+}) => {
+  return (
+    <Button onClick={onClick} variant="ghost" className="w-full">
+      <div className="flex flex-row w-full">
+        {children}
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </div>
+    </Button>
+  );
+};
 
 export const columns: ColumnDef<FileDirInfo>[] = [
+  // implement row selection with checkboxes
   //   {
   //     id: "select",
   //     header: ({ table }) => (
@@ -62,10 +101,48 @@ export const columns: ColumnDef<FileDirInfo>[] = [
   //   },
   {
     accessorKey: "name",
-    header: "Item Name",
-    cell: ({ row }) => (
-      <div className="capitalize">{row.getValue("status")}</div>
-    ),
+    header: ({ column }) => {
+      return (
+        <SortBtn
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Name
+        </SortBtn>
+      );
+    },
+    // cell: ({ row }) => (
+    //   <div className="capitalize">{row.getValue("name")}</div>
+    // ),
+  },
+  {
+    accessorKey: "extension",
+    header: ({ column }) => {
+      return (
+        <SortBtn
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Extension
+        </SortBtn>
+      );
+    },
+    cell: ({ row }) => {
+      return <div>{row.getValue("extension")}</div>;
+    },
+  },
+  {
+    accessorKey: "size",
+    header: ({ column }) => {
+      return (
+        <SortBtn
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Size
+        </SortBtn>
+      );
+    },
+    cell: ({ row }) => {
+      return <div>{row.getValue("size")}</div>;
+    },
   },
   {
     id: "add-action",
@@ -73,8 +150,16 @@ export const columns: ColumnDef<FileDirInfo>[] = [
       const fileOrDirData = row.original;
 
       const {
-        fileSubmitQueue: { addFileToQueue },
+        fileSubmitQueue: { addFileToQueue, filePathsToSubmit },
       } = useAppContext();
+
+      const isInQueue = filePathsToSubmit.some((file) => {
+        return file.fullPath === fileOrDirData.fullPath;
+      });
+
+      if (!isInQueue) {
+        return null;
+      }
 
       return (
         <div className="flex w-full justify-start">
@@ -97,7 +182,19 @@ export const columns: ColumnDef<FileDirInfo>[] = [
     enableHiding: false,
     cell: ({ row }) => {
       const fileOrDirData = row.original;
-      const { setClipboard } = useClipboard();
+      const { setClipboard, clipboardData } = useClipboard();
+      const { toast } = useToast();
+      const {
+        bookmarks: { addBookmark, removeBookmark, bookmarks },
+      } = useAppContext();
+
+      const { fullPath } = fileOrDirData;
+
+      const isBookmarked = bookmarks.some((bookmark) => {
+        return bookmark.fullPath === fullPath;
+      });
+
+      const isCopiedPath = clipboardData === fullPath;
 
       return (
         <DropdownMenu>
@@ -110,9 +207,32 @@ export const columns: ColumnDef<FileDirInfo>[] = [
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuItem
-              onClick={() => setClipboard(fileOrDirData.fullPath)}
+              onClick={() => {
+                setClipboard(fileOrDirData.fullPath);
+                toast({
+                  title: "Copied Path",
+                  description: fullPath,
+                });
+              }}
             >
-              Copy Path
+              {isCopiedPath ? <CopyCheckIcon /> : <CopyIcon />} Copy Path
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                isBookmarked
+                  ? removeBookmark(fileOrDirData)
+                  : addBookmark(fileOrDirData);
+
+                toast({
+                  title: isBookmarked ? "Unbookmarked" : "Bookmark",
+                  description: isBookmarked
+                    ? `Unbookmarked ${fullPath}`
+                    : `Bookmarked ${fullPath}`,
+                });
+              }}
+            >
+              {isBookmarked ? <BookmarkMinusIcon /> : <BookmarkPlusIcon />}
+              Bookmark
             </DropdownMenuItem>
             <DropdownMenuSeparator />
           </DropdownMenuContent>
@@ -121,6 +241,26 @@ export const columns: ColumnDef<FileDirInfo>[] = [
     },
   },
 ];
+const changeCounts: Record<string, number> = {};
+
+const useWatchValueChangeCount = (key: string, value: any) => {
+  useEffect(() => {
+    changeCounts[key] = changeCounts[key] + 1;
+    if (changeCounts[key] % 100 === 0) {
+      console.warn("Excessive Value Changes: ", key, value);
+    }
+  }, [value]);
+};
+
+const useComponentRenderCount = (logAtInterval: number = 100) => {
+  const count = useRef(0);
+
+  count.current += 1;
+
+  if (count.current % logAtInterval === 0) {
+    console.warn("Excessive Rendering", count.current);
+  }
+};
 
 export function FileFolderTable({
   directoryData,
@@ -132,10 +272,16 @@ export function FileFolderTable({
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
   const { setClipboard } = useClipboard();
+  const { pathControl } = useAppContext();
+  const { changeDir } = pathControl;
 
-  // console.log({
-
-  // })
+  useWatchValueChangeCount("changeDir", changeDir);
+  useWatchValueChangeCount("directoryData", directoryData);
+  useComponentRenderCount(1000);
+  useWatchValueChangeCount("sorting", sorting);
+  useWatchValueChangeCount("columnFilters", columnFilters);
+  useWatchValueChangeCount("columnVisibility", columnVisibility);
+  useWatchValueChangeCount("rowSelection", rowSelection);
 
   const table = useReactTable({
     data: directoryData || [],
@@ -156,15 +302,117 @@ export function FileFolderTable({
     },
   });
 
+  useEffect(() => {
+    table.setPageSize(1000000000000);
+  }, []);
+
+  const filterValue = table.getColumn("name")?.getFilterValue() as string;
+
+  const setFilterVal = (table.getColumn("name") as any)?.setFilterValue;
+
+  const allCols = useMemo(
+    () =>
+      table.getAllColumns().map((col) => {
+        return (
+          <DropdownMenuCheckboxItem
+            key={col.id}
+            className="capitalize"
+            checked={col.getIsVisible()}
+            onCheckedChange={(value) => col.toggleVisibility(!!value)}
+          >
+            {col.id}
+          </DropdownMenuCheckboxItem>
+        );
+      }),
+    [table, directoryData, sorting]
+  );
+
+  const headerGroups = useMemo(() => {
+    return table.getHeaderGroups().map((headerGroup) => (
+      <TableRow key={headerGroup.id}>
+        {headerGroup.headers.map((header) => {
+          return (
+            <TableHead key={header.id}>
+              {header.isPlaceholder
+                ? null
+                : flexRender(
+                    header.column.columnDef.header,
+                    header.getContext()
+                  )}
+            </TableHead>
+          );
+        })}
+      </TableRow>
+    ));
+  }, [table, directoryData, sorting]);
+
+  const mappedRows = useMemo(() => {
+    const rows = table.getRowModel().rows;
+
+    return rows.map((row) => {
+      return (
+        <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
+          {row.getVisibleCells().map((cell) => {
+            // TODO maybe add clipboard to context and then you can keep clipboard history as well
+            const cellCtx = cell.getContext();
+            cellCtx.column.id;
+
+            const tooltipColumns = ["name"];
+
+            const istTooltipColumn = tooltipColumns.includes(cellCtx.column.id);
+
+            const { fullPath, name, type } = row.original;
+
+            if (istTooltipColumn) {
+              return (
+                <TableCellTooltip
+                  className="font-medium justify-start text-left items-center"
+                  tooltipContent={fullPath}
+                  onTooltipContentClick={() => {
+                    // copy path to clipboard
+                    setClipboard(fullPath);
+                  }}
+                  toastOptions={{
+                    description: fullPath,
+                    title: "Copied Path",
+                  }}
+                >
+                  <div
+                    className="flex w-32 justify-start text-left"
+                    onClick={() => changeDir(row.original)}
+                  >
+                    {type === "directory" ? (
+                      <Button>
+                        <FolderIcon /> {name}
+                      </Button>
+                    ) : (
+                      <>
+                        <FileIcon /> <span>{name}</span>
+                      </>
+                    )}
+                  </div>
+                </TableCellTooltip>
+              );
+            }
+
+            return (
+              <TableCell key={cell.id}>
+                {flexRender(cell.column.columnDef.cell, cellCtx)}
+              </TableCell>
+            );
+          })}
+        </TableRow>
+      );
+    });
+  }, [table, directoryData, sorting]);
+
   return (
     <div className="w-full">
       <div className="flex items-center py-4">
         <Input
           placeholder="Filter directory...(non recursive)"
-          value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
-          onChange={(event: any) =>
-            table.getColumn("name")?.setFilterValue(event.target?.value)
-          }
+          value={filterValue}
+          onChange={(e: any) => setFilterVal(e.target?.value)}
           className="max-w-sm"
         />
         <DropdownMenu>
@@ -173,106 +421,15 @@ export function FileFolderTable({
               Columns <ChevronDownIcon className="ml-2 h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {table
-              .getAllColumns()
-              .filter((column) => column.getCanHide())
-              .map((column) => {
-                return (
-                  <DropdownMenuCheckboxItem
-                    key={column.id}
-                    className="capitalize"
-                    checked={column.getIsVisible()}
-                    onCheckedChange={(value) =>
-                      column.toggleVisibility(!!value)
-                    }
-                  >
-                    {column.id}
-                  </DropdownMenuCheckboxItem>
-                );
-              })}
-          </DropdownMenuContent>
+          <DropdownMenuContent align="end">{allCols}</DropdownMenuContent>
         </DropdownMenu>
       </div>
       <div className="rounded-md border">
         <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </TableHead>
-                  );
-                })}
-              </TableRow>
-            ))}
-          </TableHeader>
+          <TableHeader>{headerGroups}</TableHeader>
           <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => {
-                return (
-                  <TableRow
-                    key={row.id}
-                    data-state={row.getIsSelected() && "selected"}
-                  >
-                    {row.getVisibleCells().map((cell) => {
-                      // TODO maybe add clipboard to context and then you can keep clipboard history as well
-                      const cellCtx = cell.getContext();
-                      cellCtx.column.id;
-
-                      const tooltipColumns = ["name"];
-
-                      const istTooltipColumn = tooltipColumns.includes(
-                        cellCtx.column.id
-                      );
-
-                      const { fullPath, name, type } = row.original;
-
-                      if (istTooltipColumn) {
-                        return (
-                          <TableCellTooltip
-                            className="font-medium justify-start text-left items-center"
-                            tooltipContent={fullPath}
-                            onTooltipContentClick={() => {
-                              // copy path to clipboard
-                              setClipboard(fullPath);
-                            }}
-                            toastOptions={{
-                              description: fullPath,
-                              title: "Copied Path",
-                            }}
-                          >
-                            <div className="flex w-32 justify-start text-left">
-                              {type === "directory" ? (
-                                <Button>
-                                  <FolderIcon /> {name}
-                                </Button>
-                              ) : (
-                                <>
-                                  <FileIcon /> <span>{name}</span>
-                                </>
-                              )}
-                            </div>
-                          </TableCellTooltip>
-                        );
-                      }
-
-                      return (
-                        <TableCell key={cell.id}>
-                          {flexRender(cell.column.columnDef.cell, cellCtx)}
-                        </TableCell>
-                      );
-                    })}
-                  </TableRow>
-                );
-              })
+            {mappedRows.length ? (
+              mappedRows
             ) : (
               <TableRow>
                 <TableCell
@@ -285,30 +442,6 @@ export function FileFolderTable({
             )}
           </TableBody>
         </Table>
-      </div>
-      <div className="flex items-center justify-end space-x-2 py-4">
-        <div className="flex-1 text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} of{" "}
-          {table.getFilteredRowModel().rows.length} row(s) selected.
-        </div>
-        <div className="space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-          >
-            Next
-          </Button>
-        </div>
       </div>
     </div>
   );

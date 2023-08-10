@@ -26,4 +26,6 @@ export const defaultPath: FileDirInfo = {
   fullPath: "/Users/brandon",
   name: "Home Dir",
   type: "directory",
+  size: 0,
+  extension: "directory",
 };
