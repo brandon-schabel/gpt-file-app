@@ -1,11 +1,11 @@
 import { FileDirInfo } from "@u-tools/core/modules/files-factory/files-folder";
 import {
-    Menubar,
-    MenubarCheckboxItem,
-    MenubarContent,
-    MenubarItem,
-    MenubarMenu,
-    MenubarTrigger,
+  Menubar,
+  MenubarCheckboxItem,
+  MenubarContent,
+  MenubarItem,
+  MenubarMenu,
+  MenubarTrigger,
 } from "./menubar";
 
 export const NavBar = ({
@@ -14,13 +14,13 @@ export const NavBar = ({
   editBookmarkToggle,
   setEditBookmarkToggle,
 }: {
-  bookmarks: FileDirInfo[];
+  bmookmarks: FileDirInfo[];
   setEditBookmarkToggle: (value: boolean) => void;
   changeDir: (bookmark: FileDirInfo) => void;
   editBookmarkToggle: boolean;
 }) => {
   return (
-    <Menubar>
+    <Menubar  className="w-screen">
       <MenubarMenu>
         <MenubarTrigger>File</MenubarTrigger>
         <MenubarContent>
@@ -38,7 +38,7 @@ export const NavBar = ({
         <MenubarTrigger>Bookmarks</MenubarTrigger>
         <MenubarContent>
           {bookmarks.map((bookmark) => {
-            return (
+          return (
               <MenubarItem
                 key={bookmark.fullPath}
                 onClick={() => changeDir(bookmark)}

@@ -14,34 +14,12 @@ import { useClipboard } from "@u-tools/react";
 import { defaultPath } from "../../shared";
 import { useAppContext } from "./app-context";
 import { NavBar } from "./components/ui/app-navbar";
-import { FileFolderTable } from "./components/ui/file-folder-table";
-
-const defaultModels: ComboOption[] = [
-  {
-    label: "gpt-3.5-turbo-16k-0613",
-    value: "gpt-3.5-turbo-16k-0613",
-  },
-  {
-    label: "gpt-3.5-turbo-16k",
-    value: "gpt-3.5-turbo-16k",
-  },
-  {
-    label: "gpt-3.5-turbo",
-    value: "gpt-3.5-turbo",
-  },
-  {
-    label: "gpt-3.5-turbo-0301",
-    value: "gpt-3.5-turbo-0301",
-  },
-  {
-    label: "gpt-3.5-turbo-0613",
-    value: "gpt-3.5-turbo-0613",
-  },
-  {
-    label: "gpt-4",
-    value: "gpt-4",
-  },
-];
+import {
+  FileFolderTable,
+  getAllFileRows,
+} from "./components/ui/file-folder-table";
+import { defaultModels } from "./constants/config";
+import { useFileFolderTable } from "./hooks";
 
 function App() {
   const {
@@ -58,6 +36,9 @@ function App() {
     },
     server: { useListModels, useSubmitFilesPaths },
   } = useAppContext();
+  const table = useFileFolderTable({
+    directoryData,
+  });
 
   const { setClipboard } = useClipboard();
   const { state: editBookmarkToggle, setState: setEditBookmarkToggle } =
@@ -84,7 +65,8 @@ function App() {
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
-    const result = await postGptRequest({
+
+    await postGptRequest({
       files: filePathsToSubmit,
       prompt,
       model: selectedModel,
@@ -104,10 +86,15 @@ function App() {
     );
   }, [modelList]);
 
+  const selectedFiles = table.getSelectedRowModel().rows;
+  // the below does not include any folders
+  const allFiles = getAllFileRows(table);
+
   return (
     <>
       <div className="w-full flex flex-col justify-center gap-y-4">
-        <div className="fixed flex top-0 left-0 w-100vw z-10">
+        <div className="100% h-4" />
+        <div className="fixed flex top-0 left-0 100vw z-10">
           <NavBar
             bookmarks={bookmarks}
             changeDir={changeDir}
@@ -146,6 +133,9 @@ function App() {
         )}
 
         {currentViewPath && <h1>Current Path: {currentViewPath.fullPath}</h1>}
+        <h2>
+          {selectedFiles.length}/{allFiles.length} Files Selected
+        </h2>
 
         <div className="flex flex-row gap-x-2 flex-start mb-2 w-full">
           <Button
@@ -160,7 +150,6 @@ function App() {
           >
             <ChevronRightIcon />
           </Button>
-
           <div className="flex flex-row gap-x-2">
             <Input
               onChange={(e: any) => setManualInputDir(e.target.value)}
@@ -184,7 +173,7 @@ function App() {
         </div>
       </div>
       <ScrollArea className="h-[calc(100vh-128px)] w-full shadow-md border-2 rounded">
-        <FileFolderTable directoryData={directoryData} />
+        <FileFolderTable table={table} />
       </ScrollArea>
 
       <div className="my-8">
@@ -200,7 +189,7 @@ function App() {
       </div>
 
       <div className="flex flex-col gapy-y-2 mb-4">
-        {filePathsToSubmit.map((file) => {
+        {filePathsToSubmit?.map((file) => {
           return (
             <p
               onClick={() => removeFileFromQueue(file)}

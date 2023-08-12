@@ -5,13 +5,24 @@ import {
 } from "@u-tools/core/modules/utils/open-ai-completions-api";
 import { useApiFactory } from "@u-tools/react/use-api-factory";
 import { useLocalStorage } from "@u-tools/react/use-local-storage";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   SubmitFilesRequest,
   SubmitFilesResponse,
   ViewDirectoryResponse,
   defaultPath,
 } from "../../shared";
+import {
+  SortingState,
+  ColumnFiltersState,
+  VisibilityState,
+  useReactTable,
+  getCoreRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  getFilteredRowModel,
+} from "@tanstack/react-table";
+import { columns } from "./components/ui/file-folder-table";
 
 type GPTFileServerAppEndpoints = {
   "/submit-files": {
@@ -181,4 +192,56 @@ export const useFileSubmitQueue = () => {
     removeFileFromQueue,
     addFileToQueue,
   };
+};
+
+export const useWatchValueChangeCount = (key: string, value: any) => {
+  const changeCounts = useRef<Record<string, number>>({});
+
+  useEffect(() => {
+    changeCounts.current[key] = changeCounts.current[key] + 1;
+    if (changeCounts.current[key] % 100 === 0) {
+      console.warn("Excessive Value Changes: ", key, value);
+    }
+  }, [value]);
+};
+
+export const useComponentRenderCount = (logAtInterval: number = 100) => {
+  const count = useRef(0);
+
+  count.current += 1;
+
+  if (count.current % logAtInterval === 0) {
+    console.warn("Excessive Rendering", count.current);
+  }
+};
+
+export const useFileFolderTable = ({
+  directoryData,
+}: {
+  directoryData: FileDirInfo[] | null;
+}) => {
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [rowSelection, setRowSelection] = useState({});
+  const table = useReactTable({
+    data: directoryData || [],
+    columns,
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    onColumnVisibilityChange: setColumnVisibility,
+    onRowSelectionChange: setRowSelection,
+    state: {
+      sorting,
+      columnFilters,
+      columnVisibility,
+      rowSelection,
+    },
+  });
+
+  return table;
 };
