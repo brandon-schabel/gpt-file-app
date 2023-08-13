@@ -12,8 +12,7 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
-    "@u-tools/core": "^0.0.34",
-    "ai": "^2.1.28",
-    "openai-edge": "^1.2.2"
+    "@u-tools/core": "latest",
+    "@u-tools/open-ai": "^0.0.3"
   }
 }

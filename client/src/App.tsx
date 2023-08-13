@@ -20,6 +20,8 @@ import {
 } from "./components/ui/file-folder-table";
 import { defaultModels } from "./constants/config";
 import { useFileFolderTable } from "./hooks";
+import { OpenAIFileSelectUpload, WhatTheSheet } from "./fine-tune";
+import { SheetTrigger } from "./components/ui/sheet";
 
 function App() {
   const {
@@ -36,6 +38,7 @@ function App() {
     },
     server: { useListModels, useSubmitFilesPaths },
   } = useAppContext();
+
   const table = useFileFolderTable({
     directoryData,
   });
@@ -187,6 +190,16 @@ function App() {
       <div className="my-4">
         <p>Files:</p>
       </div>
+
+      <WhatTheSheet
+        trigger={
+          <SheetTrigger asChild>
+            <Button variant="outline">Fine Tune</Button>
+          </SheetTrigger>
+        }
+      >
+        <OpenAIFileSelectUpload dirData={directoryData} />
+      </WhatTheSheet>
 
       <div className="flex flex-col gapy-y-2 mb-4">
         {filePathsToSubmit?.map((file) => {

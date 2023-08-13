@@ -1,27 +1,38 @@
+import {
+  ColumnFiltersState,
+  SortingState,
+  VisibilityState,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
 import { FileDirInfo } from "@u-tools/core/modules/files-factory/files-folder";
 import {
   ModelInfo,
   ModelsListResponse,
 } from "@u-tools/core/modules/utils/open-ai-completions-api";
+import {
+  FilesListResponse,
+  OpenAIFileObject,
+} from "@u-tools/open-ai/open-ai-files-api";
+import {
+  FineTuneEvent,
+  FineTuneFile,
+  FineTuneParams,
+  FineTuneResponse,
+  FineTunesListResponse,
+} from "@u-tools/open-ai/open-ai-fine-tune-api";
 import { useApiFactory } from "@u-tools/react/use-api-factory";
 import { useLocalStorage } from "@u-tools/react/use-local-storage";
 import { useEffect, useRef, useState } from "react";
 import {
   SubmitFilesRequest,
   SubmitFilesResponse,
-  ViewDirectoryResponse,
   defaultPath,
 } from "../../shared";
-import {
-  SortingState,
-  ColumnFiltersState,
-  VisibilityState,
-  useReactTable,
-  getCoreRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  getFilteredRowModel,
-} from "@tanstack/react-table";
+import { CreateOpenAIFileRequest } from "../../shared/api-types";
 import { columns } from "./components/ui/file-folder-table";
 
 type GPTFileServerAppEndpoints = {
@@ -33,7 +44,7 @@ type GPTFileServerAppEndpoints = {
     body: {
       path: string;
     };
-    response: ViewDirectoryResponse;
+    response: FileDirInfo[];
   };
   "/get-models": {
     response: ModelsListResponse;
@@ -43,6 +54,56 @@ type GPTFileServerAppEndpoints = {
     params: {
       modelId: string;
     };
+  };
+  "/fine-tune": {
+    body: {
+      model: string;
+      training_files: FineTuneFile[];
+      validation_files: FineTuneFile[];
+      hyperparams: FineTuneParams;
+    };
+    response: FineTuneResponse; // Updated this
+  };
+  "/fine-tune/list": {
+    response: FineTunesListResponse; // Updated this
+  };
+  "/fine-tune/:id": {
+    params: {
+      id: string;
+    };
+    response: FineTuneResponse; // Updated this
+  };
+  "/fine-tune/:id/events": {
+    params: {
+      id: string;
+    };
+    response: FineTuneEvent[]; // Updated this
+  };
+  "/fine-tune/:id/cancel": {
+    params: {
+      id: string;
+    };
+    response: FineTuneResponse; // Updated this
+  };
+
+  "/files/list": {
+    response: FilesListResponse; // Updated this
+  };
+  "/files": {
+    body: CreateOpenAIFileRequest;
+    response: OpenAIFileObject; // TODO: Define the expected response type for file creation
+  };
+  "/files/:id": {
+    params: {
+      id: string;
+    };
+    response: OpenAIFileObject; // Updated this
+  };
+  "/files/:id/delete": {
+    params: {
+      id: string;
+    };
+    response: any; // TODO: Define the expected response type for file deletion
   };
 };
 
@@ -79,13 +140,34 @@ export const useServer = () => {
       { endpoint: "/view-directory", method: "post" },
       { endpoint: "/get-models", method: "get" },
       { endpoint: "/get-model", method: "get" },
+      { endpoint: "/fine-tune", method: "post" },
+      { endpoint: "/fine-tune/list", method: "get" },
+      { endpoint: "/fine-tune/:id", method: "get" },
+      { endpoint: "/fine-tune/:id/events", method: "get" },
+      { endpoint: "/fine-tune/:id/cancel", method: "delete" },
+      { endpoint: "/files/list", method: "get" },
+      { endpoint: "/files", method: "post" },
+      { endpoint: "/files/:id", method: "get" },
+      { endpoint: "/files/:id/delete", method: "delete" },
     ],
+    defaultHeaders: {
+      "Content-Type": "application/json",
+    },
   });
 
   return {
     useSubmitFilesPaths: fileServer["/submit-files"],
     useViewDirectory: fileServer["/view-directory"],
     useListModels: fileServer["/get-models"],
+    useCreateFineTune: fileServer["/fine-tune"],
+    useListFineTunes: fileServer["/fine-tune/list"],
+    useRetrieveFineTune: fileServer["/fine-tune/:id"],
+    useListFineTuneEvents: fileServer["/fine-tune/:id/events"],
+    useCancelFineTune: fileServer["/fine-tune/:id/cancel"],
+    useListFiles: fileServer["/files/list"],
+    useCreateOpenAIFile: fileServer["/files"],
+    useRetrieveFile: fileServer["/files/:id"],
+    useDeleteFile: fileServer["/files/:id/delete"],
   };
 };
 

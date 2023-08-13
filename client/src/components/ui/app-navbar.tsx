@@ -14,7 +14,7 @@ export const NavBar = ({
   editBookmarkToggle,
   setEditBookmarkToggle,
 }: {
-  bmookmarks: FileDirInfo[];
+  bookmarks: FileDirInfo[];
   setEditBookmarkToggle: (value: boolean) => void;
   changeDir: (bookmark: FileDirInfo) => void;
   editBookmarkToggle: boolean;
