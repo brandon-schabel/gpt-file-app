@@ -3,7 +3,11 @@
   "module": "index.ts",
   "type": "module",
   "scripts": {
-    "dev": "lsof -ti :8080 | xargs kill && bun index.ts"
+    "kill-port": "lsof -ti :8080 | xargs kill",
+    "link": "bun link @u-tools/core @u-tools/react @u-tools/open-ai",
+    "dev": "bun run link && bun run kill-port && bun run index.ts",
+    "dev:hot": "bun run link && bun run kill-port && bun --watch index.ts",
+    "update-u-tools": "bun update @u-tools/core @u-tools/react @u-tools/open-ai"
   },
   "devDependencies": {
     "bun-types": "latest"
@@ -12,8 +16,8 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
-    "@u-tools/core": "latest",
-    "@u-tools/open-ai": "latest",
-    "@u-tools/react": "latest"
+    "@u-tools/core": "^0.0.43",
+    "@u-tools/open-ai": "^0.0.6",
+    "@u-tools/react": "^0.0.21"
   }
 }

@@ -10,16 +10,25 @@ import {
   FineTuneFile,
   FineTuneParams,
 } from '@u-tools/open-ai/open-ai-fine-tune-api';
+import { ServerWebSocket, WebSocketHandler } from 'bun';
 import { SERVER_PORT } from '../shared';
 import { CreateOpenAIFileRequest } from '../shared/api-types';
+import { Action, State } from '../shared/shared-state';
 
 const fileFactory = createFileFactory({ baseDirectory: '~/' });
 const { route, start } = createServerFactory({
+  wsPaths: ['/state'],
   enableBodyParser: true,
   cors: {
-    allAllOrigins: true,
+    // allAllOrigins: true,
     allowedMethods: ['DELETE', 'GET', 'POST', 'PUT', 'OPTIONS', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    allowedOrigins: ['http://localhost:5173'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Requested-With',
+      'OpenAI-Organization',
+    ],
   },
 });
 
@@ -56,12 +65,17 @@ const { onRequest: onViewRoute } = route<ViewRouteRequest, FileDirInfo[]>(
   '/view-directory'
 );
 
-onViewRoute(async ({ getBody, JSONRes }) => {
+onViewRoute(async ({ getBody, jsonRes, request }) => {
+  console.log({ request });
+
   const parsedJSON = await getBody();
+  console.log({ parsedJSON });
 
   const pathData = await fileFactory.listFilesAndFolderInPath(parsedJSON.path);
 
-  return JSONRes(pathData);
+  console.log({ pathData });
+
+  return jsonRes(pathData);
 });
 
 /* submit file routes */
@@ -75,7 +89,7 @@ const { onRequest: onSubmitFilesRequest } = route<{
   body: SubmitFilesRequestBody;
 }>('/submit-files');
 
-onSubmitFilesRequest(async ({ request, getBody, JSONRes }) => {
+onSubmitFilesRequest(async ({ request, getBody, jsonRes }) => {
   // if we create the response/request type maps, then we can
   // we can create a function to handle the request type
   const jsonData = await getBody();
@@ -102,20 +116,20 @@ onSubmitFilesRequest(async ({ request, getBody, JSONRes }) => {
     model: jsonData.model,
   });
 
-  return JSONRes(result);
+  return jsonRes(result);
 });
 
 /* list models route */
 const { onRequest: onListModels } = route('/get-models');
 
-onListModels(async ({ JSONRes }) => {
-  return JSONRes(await aiCompletions.listModels());
+onListModels(async ({ jsonRes }) => {
+  return jsonRes(await aiCompletions.listModels());
 });
 
 /* get model route */
 const { onRequest: onGetModel } = route('/get-model');
 
-onGetModel(async ({ request, JSONRes }) => {
+onGetModel(async ({ request, jsonRes }) => {
   const url = new URLSearchParams(request.url);
   const modelId = url.get('modelId');
 
@@ -127,7 +141,7 @@ onGetModel(async ({ request, JSONRes }) => {
   }
 
   const model = await aiCompletions.retrieveModel(modelId);
-  return JSONRes(model);
+  return jsonRes(model);
 });
 
 // Assuming you've already initialized your server and other necessary configurations
@@ -143,7 +157,7 @@ const { onRequest: onCreateFineTune } = route<{
   };
 }>('/fine-tune');
 
-onCreateFineTune(async ({ getBody, JSONRes }) => {
+onCreateFineTune(async ({ getBody, jsonRes }) => {
   const { model, training_files, validation_files, hyperparams } =
     await getBody();
   const result = await openAIFineTune.createFineTune(
@@ -152,15 +166,15 @@ onCreateFineTune(async ({ getBody, JSONRes }) => {
     validation_files,
     hyperparams
   );
-  return JSONRes(result);
+  return jsonRes(result);
 });
 
 // 2. List all fine-tunes route
 const { onRequest: onListFineTunes } = route('/fine-tune/list');
 
-onListFineTunes(async ({ JSONRes }) => {
+onListFineTunes(async ({ jsonRes }) => {
   const result = await openAIFineTune.listFineTunes();
-  return JSONRes(result);
+  return jsonRes(result);
 });
 
 // 3. Retrieve a specific fine-tune route
@@ -168,10 +182,10 @@ const { onRequest: onRetrieveFineTune } = route<{ params: { id: string } }>(
   '/fine-tune/:id'
 );
 
-onRetrieveFineTune(async ({ JSONRes, parseQueryParams }) => {
+onRetrieveFineTune(async ({ jsonRes, parseQueryParams }) => {
   const params = parseQueryParams();
   const result = await openAIFineTune.retrieveFineTune(params?.id || '');
-  return JSONRes(result);
+  return jsonRes(result);
 });
 
 // 4. List events for a fine-tune route
@@ -179,10 +193,10 @@ const { onRequest: onListFineTuneEvents } = route<{ params: { id: string } }>(
   '/fine-tune/:id/events'
 );
 
-onListFineTuneEvents(async ({ JSONRes, parseQueryParams }) => {
+onListFineTuneEvents(async ({ jsonRes, parseQueryParams }) => {
   const params = parseQueryParams();
   const result = await openAIFineTune.listFineTuneEvents(params?.id || '');
-  return JSONRes(result);
+  return jsonRes(result);
 });
 
 // 5. Cancel a fine-tune route
@@ -190,19 +204,19 @@ const { onRequest: onCancelFineTune } = route<{ params: { id: string } }>(
   '/fine-tune/:id/cancel'
 );
 
-onCancelFineTune(async ({ parseQueryParams, JSONRes }) => {
+onCancelFineTune(async ({ parseQueryParams, jsonRes }) => {
   const params = parseQueryParams();
   const result = await openAIFineTune.cancelFineTune(params?.id || '');
-  return JSONRes(result);
+  return jsonRes(result);
 });
 
 /* FILE API */
 
 const { onRequest: onListFiles } = route('/files/list');
 
-onListFiles(async ({ JSONRes }) => {
+onListFiles(async ({ jsonRes }) => {
   const result = await openAIFiles.listFiles();
-  return JSONRes(result);
+  return jsonRes(result);
 });
 
 // 2. Create a new file route
@@ -210,7 +224,7 @@ const { onRequest: onCreateFile } = route<{ body: CreateOpenAIFileRequest }>(
   '/files'
 );
 
-onCreateFile(async ({ getBody, JSONRes }) => {
+onCreateFile(async ({ getBody, jsonRes }) => {
   const fileData = await getBody();
 
   console.log(fileData);
@@ -222,25 +236,66 @@ onCreateFile(async ({ getBody, JSONRes }) => {
 
   const result = await openAIFiles.createFile(path, purpose);
 
-  return JSONRes(result);
+  return jsonRes(result);
 });
 
 // 3. Retrieve a specific file route
 const { onRequest: onRetrieveFile } = route('/files/:id');
 
-onRetrieveFile(async ({ parseQueryParams, JSONRes }) => {
+onRetrieveFile(async ({ parseQueryParams, jsonRes }) => {
   const params = parseQueryParams();
   const result = await openAIFiles.retrieveFile(params?.id || '');
-  return JSONRes(result);
+  return jsonRes(result);
 });
 
 // 4. Delete a specific file route
 const { onRequest: onDeleteFile } = route('/files/:id/delete');
 
-onDeleteFile(async ({ parseQueryParams, JSONRes }) => {
+onDeleteFile(async ({ parseQueryParams, jsonRes }) => {
   const params = parseQueryParams();
   const result = await openAIFiles.deleteFile(params?.id || '');
-  return JSONRes(result);
+  return jsonRes(result);
 });
 
-start({ port: SERVER_PORT, verbose: true });
+let currentState: State = { count: 0 }; // default state
+const connectedClients = new Set<ServerWebSocket>();
+
+const websocketHandler: WebSocketHandler = {
+  open: ws => {
+    // Add the newly connected client to the set
+    connectedClients.add(ws);
+  },
+  close: ws => {
+    // Remove the client from the set when they disconnect
+    connectedClients.delete(ws);
+  },
+  message: (ws, msg) => {
+    console.log({
+      msg,
+    });
+    console.log({ currentState });
+    const action: Action = JSON.parse(msg as string); // Assuming the message is always a string
+    switch (action.type) {
+      case 'INCREMENT':
+        currentState.count += 1;
+        break;
+      case 'DECREMENT':
+        currentState.count -= 1;
+        break;
+      // Handle other actions as needed
+    }
+
+    console.log({currentStateAfter: currentState})
+
+    // Broadcast the updated state to all connected clients
+    for (const client of connectedClients) {
+      client.send(JSON.stringify(currentState));
+    }
+  },
+};
+
+const server = start({
+  port: SERVER_PORT,
+  verbose: true,
+  websocket: websocketHandler,
+});
