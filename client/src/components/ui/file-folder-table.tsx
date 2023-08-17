@@ -274,7 +274,7 @@ export const columns: ColumnDef<FileDirInfo>[] = [
 
 export function FileFolderTable({ table }: { table: TableType<FileDirInfo> }) {
   const { setClipboard } = useClipboard();
-  const { state, control } = useAppState();
+  const { state, control, navigateTo} = useAppState();
 
   useEffect(() => {
     table.setPageSize(1000000000000);
@@ -342,12 +342,15 @@ export function FileFolderTable({ table }: { table: TableType<FileDirInfo> }) {
                 <div
                   className="flex w-32 justify-start text-left"
                   onClick={() => {
+                    navigateTo(row.original)
+                    // console.log({ original: row.original });
+                    // console.log(state.prevViewPaths);
                     //  add callbacks to update other states
-                    control?.prevViewPaths?.set([
-                      ...state?.prevViewPaths||[],
-                      row.original,
-                    ]);
-                    control.currentPath.set(row.original);
+                    // control?.prevViewPaths?.set([
+                    //   ...(state?.prevViewPaths || []),
+                    //   row.original,
+                    // ]);
+                    // control.currentPath.set(row.original);
                   }}
                 >
                   {type === "directory" ? (

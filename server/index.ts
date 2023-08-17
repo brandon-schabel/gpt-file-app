@@ -256,6 +256,7 @@ onDeleteFile(async ({ parseQueryParams, jsonRes }) => {
 
 // TODO: state could occasionally be written to a json file and then be loaded
 // when the server starts up incase client looses the data somehow
+
 const {
   websocketHandler,
   state,
@@ -275,12 +276,17 @@ onStateChange('count', count => {
   console.log({ countChange: count });
 });
 
-onStateChange('currentPath', async currPath => {
+onStateChange('navigation', async navigation => {
+  const { currentIndex } = navigation;
+
+  const currentPathData = navigation.paths[currentIndex];
+
   const directoryData = await fileFactory.listFilesAndFolderInPath(
-    currPath.fullPath
+    currentPathData.fullPath
   );
 
-  control.prevViewPaths.push(currPath);
+  console.log({ directoryData });
 
+  // TODO add mode where where it only broadcasts to the client it was sent from
   control.directoryData.set(directoryData);
 });

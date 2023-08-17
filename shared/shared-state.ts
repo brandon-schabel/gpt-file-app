@@ -1,14 +1,17 @@
 import { FileDirInfo } from "@u-tools/core/modules/files-factory/files-folder";
 import { defaultPath } from ".";
 
+type NavigationState = {
+  paths: FileDirInfo[];
+  currentIndex: number;
+};
+
 export type ServerClientState = {
   count: number;
   bookmarks: FileDirInfo[];
   filePathsToSubmit: FileDirInfo[];
   directoryData: FileDirInfo[];
-  prevViewPaths: FileDirInfo[];
-  forwardPaths: FileDirInfo[];
-  currentPath: FileDirInfo;
+  navigation: NavigationState;
 };
 
 export const defaultState: ServerClientState = {
@@ -16,7 +19,8 @@ export const defaultState: ServerClientState = {
   bookmarks: [],
   filePathsToSubmit: [],
   directoryData: [],
-  prevViewPaths: [],
-  forwardPaths: [],
-  currentPath: defaultPath,
+  navigation: {
+    paths: [defaultPath],
+    currentIndex: 0,
+  },
 };

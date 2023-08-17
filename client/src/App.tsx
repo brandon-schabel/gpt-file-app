@@ -8,6 +8,7 @@ import { ScrollArea } from "./components/ui/scroll-area";
 
 import { useClipboard } from "@u-tools/react";
 
+import { FileDirInfo } from "@u-tools/core/modules/files-factory/files-folder";
 import { NavBar } from "./components/ui/app-navbar";
 import {
   FileFolderTable,
@@ -19,17 +20,13 @@ import { useFileFolderTable } from "./hooks";
 import { useAppState } from "./socket-context";
 
 function App() {
-  const { state, control } = useAppState();
+  const { state, control, goBack, goForward, navigateTo } = useAppState();
 
-  const {
-    bookmarks,
-    count,
-    currentPath,
-    directoryData,
-    filePathsToSubmit,
-    forwardPaths,
-    prevViewPaths,
-  } = state;
+  const currentIndex = state.navigation.currentIndex;
+
+  const currentPath = state.navigation.paths[currentIndex];
+
+  const { bookmarks, count, directoryData, filePathsToSubmit } = state;
 
   const table = useFileFolderTable({
     directoryData,
@@ -54,11 +51,58 @@ function App() {
 
   const [manualInputDir, setManualInputDir] = useState("");
 
-  console.log({prevViewPaths})
+  // console.log({ prevViewPaths });
 
   const selectedFiles = table.getSelectedRowModel().rows;
   // the below does not include any folders
   const allFiles = getAllFileRows(table);
+
+  // break down currentPath.fullPath into segments, and then create links to each
+  // segment, each segment needs to be a concatination of all paths prior
+  // to the current path, like cookie crumbs
+  let currentPathSegment = "";
+
+  const allSegments = currentPath.fullPath.split("/");
+  const mappedSegments = allSegments.map(
+    (
+      segment,
+      index
+    ): {
+      label: string;
+      fileDirInfo: FileDirInfo;
+    } => {
+      currentPathSegment += segment;
+      // add "/" for each segement except the last one
+      if (index !== allSegments.length - 1) {
+        currentPathSegment += "/";
+      }
+
+      return {
+        label: segment,
+        fileDirInfo: {
+          fullPath: currentPathSegment,
+          name: segment,
+          type: "directory",
+          extension: "",
+          size: 0,
+        },
+      };
+    }
+  );
+  const pathSegmentLinks = mappedSegments.map((segment, index) => {
+    return (
+      <span
+        key={segment.fileDirInfo.fullPath}
+        onClick={() => {
+          navigateTo(segment.fileDirInfo);
+        }}
+        className="hover:underline hover:text-green-400"
+      >
+        {segment.label}
+        {index !== allSegments.length - 1 && "/"}
+      </span>
+    );
+  });
 
   return (
     <>
@@ -67,11 +111,13 @@ function App() {
         <div className="fixed flex top-0 left-0 100vw z-10">
           <NavBar
             bookmarks={bookmarks}
-            changeDir={(bookmark) => control.currentPath.set(bookmark)}
+            changeDir={(bookmark) => navigateTo(bookmark)}
             editBookmarkToggle={false}
             setEditBookmarkToggle={() => false}
           />
         </div>
+
+        <div>{pathSegmentLinks}</div>
 
         <div>
           <Button onClick={() => control.count.set(count - 1)}>-</Button>
@@ -92,12 +138,12 @@ function App() {
                     key={bookmark.fullPath}
                     onClick={() => {
                       console.log({ bookmark });
-                      control.currentPath.set(bookmark);
+                      // control.currentPath.set(bookmark);
                       console.log("setting prev paths");
-                      control.prevViewPaths.set([
-                        ...state.prevViewPaths,
-                        bookmark,
-                      ]);
+                      // control.prevViewPaths.set([
+                      // ...state.prevViewPaths,
+                      // bookmark,
+                      // ]);
                     }}
                   >
                     {bookmark.name}
@@ -109,7 +155,7 @@ function App() {
           </div>
         )}
 
-        {currentPath && <h1>Current Path: {currentPath.fullPath}</h1>}
+        {/* {currentPath && <h1>Current Path: {currentPath.fullPath}</h1>} */}
         <h2>
           {selectedFiles?.length}/{allFiles?.length} Files Selected
         </h2>
@@ -117,18 +163,13 @@ function App() {
         <div className="flex flex-row gap-x-2 flex-start mb-2 w-full">
           <Button
             onClick={() => {
-              const lastDir =
-                state.prevViewPaths[state.prevViewPaths?.length - 1];
-
-              setTimeout(() => {
-                control.currentPath.set(lastDir);
-              }, 100);
+              goBack();
 
               //  setting two things back to back doesn't seem to work
             }}
-            disabled={prevViewPaths?.length === 0}
+            // disabled={prevViewPaths?.length === 0}
           >
-            <ChevronLeftIcon />({state.prevViewPaths?.length})
+            <ChevronLeftIcon />
           </Button>
           {/* <Button
             // onClick={() => forwardNDirs(1)}
@@ -147,7 +188,7 @@ function App() {
 
             <Button
               onClick={() => {
-                control.currentPath.set({
+                navigateTo({
                   fullPath: manualInputDir,
                   name: "Manual Input",
                   type: "directory",
