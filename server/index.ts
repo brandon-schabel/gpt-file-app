@@ -3,24 +3,25 @@ import {
   createFileFactory,
   readFilesContents,
 } from '@u-tools/core/modules/files-factory/files-folder';
-import { createServerFactory } from '@u-tools/core/modules/server-factory';
+import {
+  createServerFactory,
+  createWSStateMachine,
+} from '@u-tools/core/modules/server-factory';
 
 import { openAIFetcher } from '@u-tools/open-ai/index';
 import {
   FineTuneFile,
   FineTuneParams,
 } from '@u-tools/open-ai/open-ai-fine-tune-api';
-import { ServerWebSocket, WebSocketHandler } from 'bun';
 import { SERVER_PORT } from '../shared';
 import { CreateOpenAIFileRequest } from '../shared/api-types';
-import { Action, State } from '../shared/shared-state';
+import { ServerClientState, defaultState } from '../shared/shared-state';
 
 const fileFactory = createFileFactory({ baseDirectory: '~/' });
 const { route, start } = createServerFactory({
   wsPaths: ['/state'],
   enableBodyParser: true,
   cors: {
-    // allAllOrigins: true,
     allowedMethods: ['DELETE', 'GET', 'POST', 'PUT', 'OPTIONS', 'PATCH'],
     allowedOrigins: ['http://localhost:5173'],
     allowedHeaders: [
@@ -31,10 +32,6 @@ const { route, start } = createServerFactory({
     ],
   },
 });
-
-console.log(route);
-
-console.log(Bun.env.OPEN_AI_KEY);
 
 // TODO combine into one config, move list models out of completions
 const aiCompletions = openAIFetcher.completions({
@@ -48,7 +45,7 @@ const openAIFineTune = openAIFetcher.fineTune({
   apiKey: Bun.env.OPEN_AI_KEY || '',
 });
 
-// the request should return an object wiht the "onRequest" handler, that way a route can return other
+// the request should  return an object wiht the "onRequest" handler, that way a route can return other
 // configurations for configuration a route
 const { onRequest: onBaseRequest } = route('/');
 
@@ -257,45 +254,44 @@ onDeleteFile(async ({ parseQueryParams, jsonRes }) => {
   return jsonRes(result);
 });
 
-let currentState: State = { count: 0 }; // default state
-const connectedClients = new Set<ServerWebSocket>();
+// let currentState: State = defaultState; // default state
+// const connectedClients = new Set<ServerWebSocket>();
 
-const websocketHandler: WebSocketHandler = {
-  open: ws => {
-    // Add the newly connected client to the set
-    connectedClients.add(ws);
-  },
-  close: ws => {
-    // Remove the client from the set when they disconnect
-    connectedClients.delete(ws);
-  },
-  message: (ws, msg) => {
-    console.log({
-      msg,
-    });
-    console.log({ currentState });
-    const action: Action = JSON.parse(msg as string); // Assuming the message is always a string
-    switch (action.type) {
-      case 'INCREMENT':
-        currentState.count += 1;
-        break;
-      case 'DECREMENT':
-        currentState.count -= 1;
-        break;
-      // Handle other actions as needed
-    }
+// const websocketHandler: WebSocketHandler = {
+//   open: ws => {
+//     // Add the newly connected client to the set
+//     connectedClients.add(ws);
+//   },
+//   close: ws => {
+//     // Remove the client from the set when they disconnect
+//     connectedClients.delete(ws);
+//   },
+//   message: (ws, msg) => {
+//     const action: Action = JSON.parse(msg as string); // Assuming the message is always a string
+//     switch (action.type) {
+//       case 'INCREMENT':
+//         currentState.count += 1;
+//         break;
+//       case 'DECREMENT':
+//         currentState.count -= 1;
+//         break;
+//     }
 
-    console.log({currentStateAfter: currentState})
+//     // Broadcast the updated state to all connected clients
+//     for (const client of connectedClients) {
+//       client.send(JSON.stringify(currentState));
+//     }
+//   },
+// };
 
-    // Broadcast the updated state to all connected clients
-    for (const client of connectedClients) {
-      client.send(JSON.stringify(currentState));
-    }
-  },
-};
+// TODO: state could occasionally be written to a json file and then be loaded
+// when the server starts up incase client looses the data somehow
+const { websocketHandler, state, control } =
+  createWSStateMachine<ServerClientState>(defaultState);
 
 const server = start({
   port: SERVER_PORT,
   verbose: true,
+  // TODO figure out how handle multiple handlers at the same time
   websocket: websocketHandler,
 });
