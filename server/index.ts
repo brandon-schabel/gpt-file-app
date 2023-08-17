@@ -254,44 +254,33 @@ onDeleteFile(async ({ parseQueryParams, jsonRes }) => {
   return jsonRes(result);
 });
 
-// let currentState: State = defaultState; // default state
-// const connectedClients = new Set<ServerWebSocket>();
-
-// const websocketHandler: WebSocketHandler = {
-//   open: ws => {
-//     // Add the newly connected client to the set
-//     connectedClients.add(ws);
-//   },
-//   close: ws => {
-//     // Remove the client from the set when they disconnect
-//     connectedClients.delete(ws);
-//   },
-//   message: (ws, msg) => {
-//     const action: Action = JSON.parse(msg as string); // Assuming the message is always a string
-//     switch (action.type) {
-//       case 'INCREMENT':
-//         currentState.count += 1;
-//         break;
-//       case 'DECREMENT':
-//         currentState.count -= 1;
-//         break;
-//     }
-
-//     // Broadcast the updated state to all connected clients
-//     for (const client of connectedClients) {
-//       client.send(JSON.stringify(currentState));
-//     }
-//   },
-// };
-
 // TODO: state could occasionally be written to a json file and then be loaded
 // when the server starts up incase client looses the data somehow
-const { websocketHandler, state, control } =
-  createWSStateMachine<ServerClientState>(defaultState);
+const {
+  websocketHandler,
+  state,
+  control,
+  onStateChange,
+  updateStateAndDispatch,
+} = createWSStateMachine<ServerClientState>(defaultState);
 
 const server = start({
   port: SERVER_PORT,
   verbose: true,
   // TODO figure out how handle multiple handlers at the same time
   websocket: websocketHandler,
+});
+
+onStateChange('count', count => {
+  console.log({ countChange: count });
+});
+
+onStateChange('currentPath', async currPath => {
+  const directoryData = await fileFactory.listFilesAndFolderInPath(
+    currPath.fullPath
+  );
+
+  control.prevViewPaths.push(currPath);
+
+  control.directoryData.set(directoryData);
 });

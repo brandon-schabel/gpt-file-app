@@ -9,9 +9,9 @@
 import { StrictMode } from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
-import { AppContextProvider } from "./app-context";
 import { Toaster } from "./components/ui/toaster";
 import "./index.css";
+import { SocketContextProvider } from "./socket-context";
 
 // const Header = () => {
 //   return (
@@ -80,10 +80,12 @@ if (!rootElement.innerHTML) {
   const root = ReactDOM.createRoot(rootElement);
   root.render(
     <StrictMode>
-      <AppContextProvider>
+      <SocketContextProvider>
+        {/* <AppContextProvider> */}
         <Toaster />
         <App />
-      </AppContextProvider>
+        {/* </AppContextProvider> */}
+      </SocketContextProvider>
     </StrictMode>
   );
 }

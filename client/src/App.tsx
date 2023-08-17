@@ -1,97 +1,60 @@
-import { useLocalStorage } from "@u-tools/react/use-local-storage";
-import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { ChevronLeftIcon } from "lucide-react";
+import { useState } from "react";
 import "./App.css";
 import { Button } from "./components/ui/button";
-import { ComboOption, Combobox } from "./components/ui/combobox";
 import { Input } from "./components/ui/input";
 
 import { ScrollArea } from "./components/ui/scroll-area";
 
-import { Textarea } from "./components/ui/textarea";
-
 import { useClipboard } from "@u-tools/react";
-import { defaultPath } from "../../shared";
 
-import { useAppContext } from "./app-context";
 import { NavBar } from "./components/ui/app-navbar";
 import {
   FileFolderTable,
   getAllFileRows,
 } from "./components/ui/file-folder-table";
 import { SheetTrigger } from "./components/ui/sheet";
-import { defaultModels } from "./constants/config";
 import { OpenAIFileSelectUpload, WhatTheSheet } from "./fine-tune";
 import { useFileFolderTable } from "./hooks";
-import { useAppState } from "./use-app-state";
+import { useAppState } from "./socket-context";
 
 function App() {
   const { state, control } = useAppState();
 
   const {
-    bookmarks: { bookmarks = [], removeBookmark },
-    fileSubmitQueue: { filePathsToSubmit = [], removeFileFromQueue },
-    pathControl: {
-      backNDirs,
-      changeDir,
-      currentViewPath = defaultPath,
-      directoryData = [],
-      forwardNDirs,
-      forwardPaths = [],
-      prevViewPaths = [],
-    },
-    server: { useListModels, useSubmitFilesPaths },
-  } = useAppContext();
+    bookmarks,
+    count,
+    currentPath,
+    directoryData,
+    filePathsToSubmit,
+    forwardPaths,
+    prevViewPaths,
+  } = state;
 
   const table = useFileFolderTable({
     directoryData,
   });
 
   const { setClipboard } = useClipboard();
-  const { state: editBookmarkToggle, setState: setEditBookmarkToggle } =
-    useLocalStorage({
-      key: "bookMarkToggle",
-      initialState: false,
-    });
+  // const { state: editBookmarkToggle, setState: setEditBookmarkToggle } =
+  //   useLocalStorage({
+  //     key: "bookMarkToggle",
+  //     initialState: false,
+  //   });
 
-  const { state: selectedModel, set: setSelectedModel } = useLocalStorage({
-    key: "selectedModel",
-    initialState: "gpt-3.5-turbo",
-  });
-  const { get: getModels, data: modelList } = useListModels();
-  useEffect(() => {
-    getModels();
-  }, []);
+  // const { state: selectedModel, set: setSelectedModel } = useLocalStorage({
+  //   key: "selectedModel",
+  //   initialState: "gpt-3.5-turbo",
+  // });
 
-  const { data: gptRequestData, post: postGptRequest } = useSubmitFilesPaths();
-
-  const { state: prompt, set: setPrompt } = useLocalStorage<string>({
-    key: "prompt",
-    initialState: "",
-  });
-
-  const handleSubmit = async (e: any) => {
-    e.preventDefault();
-
-    await postGptRequest({
-      files: filePathsToSubmit,
-      prompt,
-      model: selectedModel,
-    });
-  };
+  // const { state: prompt, set: setPrompt } = useLocalStorage<string>({
+  //   key: "prompt",
+  //   initialState: "",
+  // });
 
   const [manualInputDir, setManualInputDir] = useState("");
 
-  const modelOptions = useMemo((): ComboOption[] => {
-    return (
-      modelList?.data.map((item) => {
-        return {
-          label: item.id,
-          value: item.id,
-        };
-      }) || []
-    );
-  }, [modelList]);
+  console.log({prevViewPaths})
 
   const selectedFiles = table.getSelectedRowModel().rows;
   // the below does not include any folders
@@ -104,67 +67,79 @@ function App() {
         <div className="fixed flex top-0 left-0 100vw z-10">
           <NavBar
             bookmarks={bookmarks}
-            changeDir={changeDir}
-            editBookmarkToggle={editBookmarkToggle}
-            setEditBookmarkToggle={setEditBookmarkToggle}
+            changeDir={(bookmark) => control.currentPath.set(bookmark)}
+            editBookmarkToggle={false}
+            setEditBookmarkToggle={() => false}
           />
         </div>
 
         <div>
-          {/* <button onClick={() => control.count.set(state.count - 1)}>-</button>( */}
-          {state.count})
-          <button onClick={() => control.count.set(state.count + 1)}>+</button>
-          {/* <button onClick={() => control.count.set(0)}>Reset</button> */}
-          <pre>{JSON.stringify(state, null, 2)}</pre>
+          <Button onClick={() => control.count.set(count - 1)}>-</Button>
+          <Button onClick={() => control.count.set(count + 1)}>+</Button>
+          <Button onClick={() => control.count.set(0)}>Reset</Button>
+          <pre>{count}</pre>
         </div>
 
-        {/* move to modal */}
-        {editBookmarkToggle && (
+        {false && (
           <div className="flex flex-row gap-x-2 w-full justify-center">
-            {bookmarks.map((bookmark) => {
+            {bookmarks?.map((bookmark) => {
               return (
-                <div className="flex flex-col max-w-[100px] gap-y-2">
+                <div
+                  className="flex flex-col max-w-[100px] gap-y-2"
+                  key={bookmark.fullPath}
+                >
                   <Button
                     key={bookmark.fullPath}
                     onClick={() => {
-                      changeDir(bookmark);
+                      console.log({ bookmark });
+                      control.currentPath.set(bookmark);
+                      console.log("setting prev paths");
+                      control.prevViewPaths.set([
+                        ...state.prevViewPaths,
+                        bookmark,
+                      ]);
                     }}
                   >
                     {bookmark.name}
                   </Button>
-                  {editBookmarkToggle && (
-                    <Button
-                      onClick={() => {
-                        removeBookmark(bookmark);
-                      }}
-                    >
-                      Remove
-                    </Button>
-                  )}
+                  {false && <Button onClick={() => {}}>Remove</Button>}
                 </div>
               );
             })}
           </div>
         )}
 
-        {currentViewPath && <h1>Current Path: {currentViewPath.fullPath}</h1>}
+        {currentPath && <h1>Current Path: {currentPath.fullPath}</h1>}
         <h2>
-          {selectedFiles.length}/{allFiles.length} Files Selected
+          {selectedFiles?.length}/{allFiles?.length} Files Selected
         </h2>
 
         <div className="flex flex-row gap-x-2 flex-start mb-2 w-full">
           <Button
-            onClick={() => backNDirs(1)}
-            disabled={prevViewPaths.length === 0}
+            onClick={() => {
+              const lastDir =
+                state.prevViewPaths[state.prevViewPaths?.length - 1];
+
+              setTimeout(() => {
+                control.currentPath.set(lastDir);
+              }, 100);
+
+              //  setting two things back to back doesn't seem to work
+            }}
+            disabled={prevViewPaths?.length === 0}
           >
-            <ChevronLeftIcon />
+            <ChevronLeftIcon />({state.prevViewPaths?.length})
           </Button>
-          <Button
-            onClick={() => forwardNDirs(1)}
+          {/* <Button
+            // onClick={() => forwardNDirs(1)}
+            onClick={() => {
+              forwardPaths.length > 0 &&
+                control.currentPath.set(forwardPaths[0]);
+            }}
             disabled={forwardPaths.length === 0}
           >
             <ChevronRightIcon />
-          </Button>
+          </Button> */}
           <div className="flex flex-row gap-x-2">
             <Input
               onChange={(e: any) => setManualInputDir(e.target.value)}
@@ -172,7 +147,7 @@ function App() {
 
             <Button
               onClick={() => {
-                changeDir({
+                control.currentPath.set({
                   fullPath: manualInputDir,
                   name: "Manual Input",
                   type: "directory",
@@ -194,11 +169,11 @@ function App() {
       <div className="my-8">
         <label className="text-lg ">Prompt</label>
       </div>
-      <Textarea
+      {/* <Textarea
         onChange={(e: any) => setPrompt(e.target?.values)}
         value={prompt}
         placeholder="Additional Prompt"
-      ></Textarea>
+      ></Textarea> */}
       <div className="my-4">
         <p>Files:</p>
       </div>
@@ -217,23 +192,24 @@ function App() {
         {filePathsToSubmit?.map((file) => {
           return (
             <p
-              onClick={() => removeFileFromQueue(file)}
+              // onClick={() => removeFileFromQueue(file)}
               className="hover:bg-red-200 rounded"
+              key={file.fullPath}
             >
               {file.name} - {file.fullPath}
             </p>
           );
         })}
       </div>
-      <Combobox
+      {/* <Combobox
         options={defaultModels}
         value={selectedModel}
         onValueChange={setSelectedModel}
-      />
+      /> */}
 
       <div className="w-full justify-center">
         <Button
-          onClick={handleSubmit}
+          // onClick={handleSubmit}
           variant={"ghost"}
           className="w-32 bg-blue-400"
         >
@@ -243,12 +219,12 @@ function App() {
       <h1 className="font-bold">Output:</h1>
 
       <div className="w-full justify-center items-center flex flex-col">
-        <ScrollArea className="h-[300px] w-full rounded-md border p-4 text-left">
+        {/* <ScrollArea className="h-[300px] w-full rounded-md border p-4 text-left">
           {gptRequestData?.choices.map((choice) => {
             return <p>{choice.message.content}</p>;
           })}
-        </ScrollArea>
-        <div>
+        </ScrollArea> */}
+        {/* <div>
           <Button
             onClick={() => {
               setClipboard(
@@ -263,7 +239,7 @@ function App() {
           >
             Copy output
           </Button>
-        </div>
+        </div> */}
 
         {/* <RandomComponent /> */}
       </div>

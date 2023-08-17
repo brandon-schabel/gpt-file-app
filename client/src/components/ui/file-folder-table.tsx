@@ -9,7 +9,6 @@ import {
   type Table as TableType,
 } from "@tanstack/react-table";
 
-import { useAppContext } from "@/app-context";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -29,6 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useAppState } from "@/socket-context";
 import { FileDirInfo } from "@u-tools/core/modules/files-factory/files-folder";
 import { useClipboard } from "@u-tools/react";
 import {
@@ -79,12 +79,12 @@ const SortBtn = ({
   children?: ReactNode;
 }) => {
   return (
-    <Button onClick={onClick} variant="ghost" className="w-full">
+    <span onClick={onClick} className="w-full">
       <div className="flex flex-row w-full">
         {children}
         <ArrowUpDown className="ml-2 h-4 w-4" />
       </div>
-    </Button>
+    </span>
   );
 };
 
@@ -170,12 +170,15 @@ export const columns: ColumnDef<FileDirInfo>[] = [
     id: "add-action",
     cell: ({ row }) => {
       const fileOrDirData = row.original;
-
       const {
-        fileSubmitQueue: { addFileToQueue, filePathsToSubmit },
-      } = useAppContext();
+        state: { filePathsToSubmit },
+      } = useAppState();
 
-      const isInQueue = filePathsToSubmit.some((file) => {
+      // const {
+      //   fileSubmitQueue: { addFileToQueue, filePathsToSubmit },
+      // } = useAppContext();
+
+      const isInQueue = filePathsToSubmit?.some((file) => {
         return file.fullPath === fileOrDirData.fullPath;
       });
 
@@ -188,7 +191,8 @@ export const columns: ColumnDef<FileDirInfo>[] = [
           {fileOrDirData.type === "file" && (
             <Button
               onClick={() => {
-                addFileToQueue(fileOrDirData);
+                filePathsToSubmit.push(fileOrDirData);
+                // addFileToQueue(fileOrDirData);
               }}
               variant={"outline"}
             >
@@ -207,8 +211,12 @@ export const columns: ColumnDef<FileDirInfo>[] = [
       const { setClipboard, clipboardData } = useClipboard();
       const { toast } = useToast();
       const {
-        bookmarks: { addBookmark, removeBookmark, bookmarks },
-      } = useAppContext();
+        state: { bookmarks },
+        control,
+      } = useAppState();
+      // const {
+      //   bookmarks: { addBookmark, removeBookmark, bookmarks },
+      // } = useAppContext();
 
       const { fullPath } = fileOrDirData;
 
@@ -242,8 +250,8 @@ export const columns: ColumnDef<FileDirInfo>[] = [
             <DropdownMenuItem
               onClick={() => {
                 isBookmarked
-                  ? removeBookmark(fileOrDirData)
-                  : addBookmark(fileOrDirData);
+                  ? control.bookmarks.pop()
+                  : control.bookmarks.push(fileOrDirData);
 
                 toast({
                   title: isBookmarked ? "Unbookmarked" : "Bookmark",
@@ -266,8 +274,7 @@ export const columns: ColumnDef<FileDirInfo>[] = [
 
 export function FileFolderTable({ table }: { table: TableType<FileDirInfo> }) {
   const { setClipboard } = useClipboard();
-  const { pathControl } = useAppContext();
-  const { changeDir } = pathControl;
+  const { state, control } = useAppState();
 
   useEffect(() => {
     table.setPageSize(1000000000000);
@@ -334,7 +341,14 @@ export function FileFolderTable({ table }: { table: TableType<FileDirInfo> }) {
               >
                 <div
                   className="flex w-32 justify-start text-left"
-                  onClick={() => changeDir(row.original)}
+                  onClick={() => {
+                    //  add callbacks to update other states
+                    control?.prevViewPaths?.set([
+                      ...state?.prevViewPaths||[],
+                      row.original,
+                    ]);
+                    control.currentPath.set(row.original);
+                  }}
                 >
                   {type === "directory" ? (
                     <Button>
