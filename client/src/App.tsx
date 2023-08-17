@@ -1,5 +1,5 @@
-import { ChevronLeftIcon } from "lucide-react";
-import { useState } from "react";
+import { ChevronLeftIcon, CloudIcon } from "lucide-react";
+import { useEffect, useState } from "react";
 import "./App.css";
 import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
@@ -15,6 +15,7 @@ import {
   getAllFileRows,
 } from "./components/ui/file-folder-table";
 import { SheetTrigger } from "./components/ui/sheet";
+import { Textarea } from "./components/ui/textarea";
 import { OpenAIFileSelectUpload, WhatTheSheet } from "./fine-tune";
 import { useFileFolderTable } from "./hooks";
 import { useAppState } from "./socket-context";
@@ -33,6 +34,10 @@ function App() {
   });
 
   const { setClipboard } = useClipboard();
+
+  // const selectedFiles = table.getSelectedRowModel().rows.map((row) => {
+  //   row.original;
+  // });
   // const { state: editBookmarkToggle, setState: setEditBookmarkToggle } =
   //   useLocalStorage({
   //     key: "bookMarkToggle",
@@ -53,7 +58,15 @@ function App() {
 
   // console.log({ prevViewPaths });
 
-  const selectedFiles = table.getSelectedRowModel().rows;
+  const selectedFiles = table.getSelectedRowModel().rows.map((row) => {
+    return row.original;
+  });
+  const selectedRowsLen = selectedFiles.length;
+
+  useEffect(() => {
+    control.filePathsToSubmit.set(selectedFiles);
+  }, [selectedRowsLen]);
+
   // the below does not include any folders
   const allFiles = getAllFileRows(table);
 
@@ -210,11 +223,11 @@ function App() {
       <div className="my-8">
         <label className="text-lg ">Prompt</label>
       </div>
-      {/* <Textarea
-        onChange={(e: any) => setPrompt(e.target?.values)}
-        value={prompt}
+      <Textarea
+        onChange={(e: any) => control.prompt.set(e.target?.value)}
+        value={state.prompt}
         placeholder="Additional Prompt"
-      ></Textarea> */}
+      ></Textarea>
       <div className="my-4">
         <p>Files:</p>
       </div>
@@ -253,23 +266,42 @@ function App() {
           // onClick={handleSubmit}
           variant={"ghost"}
           className="w-32 bg-blue-400"
+          onClick={() => {
+            if (
+              state.completionAPIStatus === "FETCH" ||
+              state.completionAPIStatus === "IN_PROGRESS"
+            ) {
+              control.completionAPIStatus.set("IDLE");
+            } else {
+              control.completionAPIStatus.set("FETCH");
+            }
+          }}
         >
-          Submit
+          {state.completionAPIStatus === "FETCH" ||
+          state.completionAPIStatus === "IN_PROGRESS" ? (
+            <>
+              <CloudIcon /> "Cancel"
+            </>
+          ) : (
+            "Submit"
+          )}
         </Button>
+
+        <p>Completion Status {state.completionAPIStatus}</p>
       </div>
       <h1 className="font-bold">Output:</h1>
 
       <div className="w-full justify-center items-center flex flex-col">
-        {/* <ScrollArea className="h-[300px] w-full rounded-md border p-4 text-left">
-          {gptRequestData?.choices.map((choice) => {
+        <ScrollArea className="h-[300px] w-full rounded-md border p-4 text-left">
+          {state.completionResponse?.choices.map((choice) => {
             return <p>{choice.message.content}</p>;
           })}
-        </ScrollArea> */}
-        {/* <div>
+        </ScrollArea>
+        <div>
           <Button
             onClick={() => {
               setClipboard(
-                gptRequestData?.choices
+                state.completionResponse?.choices
                   .map((choice) => {
                     return choice.message.content;
                   })
@@ -280,7 +312,7 @@ function App() {
           >
             Copy output
           </Button>
-        </div> */}
+        </div>
 
         {/* <RandomComponent /> */}
       </div>

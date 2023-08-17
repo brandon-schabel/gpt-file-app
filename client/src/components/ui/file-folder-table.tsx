@@ -274,7 +274,7 @@ export const columns: ColumnDef<FileDirInfo>[] = [
 
 export function FileFolderTable({ table }: { table: TableType<FileDirInfo> }) {
   const { setClipboard } = useClipboard();
-  const { state, control, navigateTo} = useAppState();
+  const {navigateTo} = useAppState();
 
   useEffect(() => {
     table.setPageSize(1000000000000);
