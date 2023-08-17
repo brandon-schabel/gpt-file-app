@@ -12,18 +12,22 @@ import { Textarea } from "./components/ui/textarea";
 
 import { useClipboard } from "@u-tools/react";
 import { defaultPath } from "../../shared";
+
 import { useAppContext } from "./app-context";
 import { NavBar } from "./components/ui/app-navbar";
 import {
   FileFolderTable,
   getAllFileRows,
 } from "./components/ui/file-folder-table";
-import { defaultModels } from "./constants/config";
-import { useFileFolderTable } from "./hooks";
-import { OpenAIFileSelectUpload, WhatTheSheet } from "./fine-tune";
 import { SheetTrigger } from "./components/ui/sheet";
+import { defaultModels } from "./constants/config";
+import { OpenAIFileSelectUpload, WhatTheSheet } from "./fine-tune";
+import { useFileFolderTable } from "./hooks";
+import { useAppState } from "./use-app-state";
 
 function App() {
+  const { state, control } = useAppState();
+
   const {
     bookmarks: { bookmarks = [], removeBookmark },
     fileSubmitQueue: { filePathsToSubmit = [], removeFileFromQueue },
@@ -104,6 +108,14 @@ function App() {
             editBookmarkToggle={editBookmarkToggle}
             setEditBookmarkToggle={setEditBookmarkToggle}
           />
+        </div>
+
+        <div>
+          {/* <button onClick={() => control.count.set(state.count - 1)}>-</button>( */}
+          {state.count})
+          <button onClick={() => control.count.set(state.count + 1)}>+</button>
+          {/* <button onClick={() => control.count.set(0)}>Reset</button> */}
+          <pre>{JSON.stringify(state, null, 2)}</pre>
         </div>
 
         {/* move to modal */}
@@ -252,6 +264,8 @@ function App() {
             Copy output
           </Button>
         </div>
+
+        {/* <RandomComponent /> */}
       </div>
     </>
   );
