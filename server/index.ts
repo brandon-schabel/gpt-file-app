@@ -7,7 +7,7 @@ import {
   createWSStateMachine,
 } from '@u-tools/core/modules/server-factory';
 
-import { openAIFetcher } from '@u-tools/open-ai/index';
+import { createOpenAIApi } from '@u-tools/open-ai/index';
 import { SERVER_PORT } from '../shared';
 import { ServerClientState, defaultState } from '../shared/shared-state';
 
@@ -27,16 +27,9 @@ const { route, start } = createServerFactory({
   },
 });
 
-// TODO: combine into one config, move list models out of completions
-const aiCompletions = openAIFetcher.completions({
-  apiKey: Bun.env.OPEN_AI_KEY || '',
-});
-const openAIFiles = openAIFetcher.files({
+const ai = createOpenAIApi({
   apiKey: Bun.env.OPEN_AI_KEY || '',
   organizationId: Bun.env.OPEN_AI_ORGANIZATION_ID || '',
-});
-const openAIFineTune = openAIFetcher.fineTune({
-  apiKey: Bun.env.OPEN_AI_KEY || '',
 });
 
 const { onRequest: onBaseRequest } = route('/');
@@ -81,34 +74,6 @@ onStateChange('navigation', async navigation => {
   control.directoryData.set(directoryData);
 });
 
-// onStateChange('filePathsToSubmit', async filePathsToSubmit => {
-//   // TODO: need to have a submit status to trigger this so we don't submit everytime files change
-//   if (filePathsToSubmit && filePathsToSubmit.length > 0) {
-//     const allFilesContent = await readFilesContents(
-//       filePathsToSubmit.map(file => file.fullPath)
-//     );
-
-//     let promptToSubmit = `Your prompt here.`;  // Update this with the necessary prompt logic
-
-//     allFilesContent?.forEach(file => {
-//       let filePrompt = `
-//         ${file.path}:
-//         ${file.content}
-//       `;
-
-//       promptToSubmit += filePrompt;
-//     });
-
-//     const result = await aiCompletions.getCompletions({
-//       prompt: promptToSubmit,
-//       model: 'Your model here',  // Update this with the necessary model logic
-//     });
-
-//     // Handle the result as necessary
-//     console.log(result);
-//   }
-// });
-
 onStateChange('completionAPIStatus', async status => {
   console.log({ status, paths: state.filePathsToSubmit });
   if (status !== 'FETCH') return;
@@ -131,15 +96,31 @@ onStateChange('completionAPIStatus', async status => {
     promptToSubmit += filePrompt;
   });
 
-  // let promptToSubmit = ``;  // Update this with the necessary prompt logic
-
   promptToSubmit += state.prompt;
 
-  const result = await aiCompletions.getCompletions({
-    prompt: promptToSubmit,
-    model: state.model,
+  const result = await ai.post({
+    endpoint: '/v1/chat/completions',
+    body: {
+      model: 'gpt-4',
+      messages: [
+        {
+          content:
+            'You are a very good programmer, your job is to teach programming with a typesafe approach, you write clean easy to understand and modern code.',
+          role: 'system',
+        },
+        {
+          content: promptToSubmit,
+          role: 'user',
+        },
+      ],
+    },
   });
 
-  control.completionResponse.set(result);
-  control.completionAPIStatus.set('DONE');
+  if (result) {
+    control.completionResponse.set(result);
+    control.completionAPIStatus.set('DONE');
+    return;
+  }
+
+  control.completionAPIStatus.set('IDLE');
 });
