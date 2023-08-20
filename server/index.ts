@@ -56,7 +56,7 @@ const server = start({
 });
 
 onStateChange('count', count => {
-  console.log({ countChange: count });
+  console.log(state);
 });
 
 onStateChange('navigation', async navigation => {

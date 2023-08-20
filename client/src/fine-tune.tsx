@@ -13,6 +13,7 @@ import { Button } from "./components/ui/button";
 import { FileFolderTable } from "./components/ui/file-folder-table";
 import { Input } from "./components/ui/input";
 import { useFileFolderTable, useServer } from "./hooks";
+import { useAppState } from "./socket-context";
 
 export function WhatTheSheet({
   children,
@@ -48,9 +49,10 @@ export const OpenAIFileSelectUpload = ({
 }: {
   dirData: FileDirInfo[] | null;
 }) => {
-  const { useCreateOpenAIFile } = useServer();
+  // const { useCreateOpenAIFile } = useServer();
+  const {control, state} = useAppState()
   const [purpose, setPurpose] = useState("");
-  const { data, post } = useCreateOpenAIFile();
+  // const { data, post } = useCreateOpenAIFile();
 
   const filteredData = useMemo(
     () =>
@@ -71,12 +73,12 @@ export const OpenAIFileSelectUpload = ({
 
     console.log({ selectedFile });
 
-    const result = await post({
-        file: selectedFile,
-        purpose,
-    });
+    // const result = await post({
+    //     file: selectedFile,
+    //     purpose,
+    // });
 
-    console.log({ result });
+    // console.log({ result });
   };
 
   return (
@@ -91,7 +93,7 @@ export const OpenAIFileSelectUpload = ({
       <Button onClick={handleFileCreate}>Upload File</Button>
 
       <div>Uploaded File Response:</div>
-      <pre>{JSON.stringify(data, null, 2)}</pre>
+      {/* <pre>{JSON.stringify(data, null, 2)}</pre> */}
     </>
   );
 };

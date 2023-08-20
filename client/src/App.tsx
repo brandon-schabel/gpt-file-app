@@ -1,5 +1,5 @@
-import { ChevronLeftIcon, CloudIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { ChevronLeftIcon, ChevronRightIcon, CloudIcon } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import "./App.css";
 import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
@@ -15,6 +15,8 @@ import {
   getAllFileRows,
 } from "./components/ui/file-folder-table";
 import { SheetTrigger } from "./components/ui/sheet";
+import { SyncBoolean } from "./components/ui/sync-boolean";
+import { SyncInput } from "./components/ui/sync-input";
 import { Textarea } from "./components/ui/textarea";
 import { OpenAIFileSelectUpload, WhatTheSheet } from "./fine-tune";
 import { useFileFolderTable } from "./hooks";
@@ -22,41 +24,24 @@ import { useAppState } from "./socket-context";
 
 function App() {
   const { state, control, goBack, goForward, navigateTo } = useAppState();
+  const { bookmarks, count, directoryData, filePathsToSubmit } = state;
 
   const currentIndex = state.navigation.currentIndex;
-
   const currentPath = state.navigation.paths[currentIndex];
-
-  const { bookmarks, count, directoryData, filePathsToSubmit } = state;
 
   const table = useFileFolderTable({
     directoryData,
   });
 
+  const renderCount = useRef(0);
+
+  console.log(renderCount.current);
+
+  renderCount.current++;
+
   const { setClipboard } = useClipboard();
 
-  // const selectedFiles = table.getSelectedRowModel().rows.map((row) => {
-  //   row.original;
-  // });
-  // const { state: editBookmarkToggle, setState: setEditBookmarkToggle } =
-  //   useLocalStorage({
-  //     key: "bookMarkToggle",
-  //     initialState: false,
-  //   });
-
-  // const { state: selectedModel, set: setSelectedModel } = useLocalStorage({
-  //   key: "selectedModel",
-  //   initialState: "gpt-3.5-turbo",
-  // });
-
-  // const { state: prompt, set: setPrompt } = useLocalStorage<string>({
-  //   key: "prompt",
-  //   initialState: "",
-  // });
-
   const [manualInputDir, setManualInputDir] = useState("");
-
-  // console.log({ prevViewPaths });
 
   const selectedFiles = table.getSelectedRowModel().rows.map((row) => {
     return row.original;
@@ -102,10 +87,11 @@ function App() {
       };
     }
   );
+
   const pathSegmentLinks = mappedSegments.map((segment, index) => {
     return (
       <span
-        key={segment.fileDirInfo.fullPath}
+        key={segment.fileDirInfo.fullPath + segment.label}
         onClick={() => {
           navigateTo(segment.fileDirInfo);
         }}
@@ -150,13 +136,7 @@ function App() {
                   <Button
                     key={bookmark.fullPath}
                     onClick={() => {
-                      console.log({ bookmark });
-                      // control.currentPath.set(bookmark);
-                      console.log("setting prev paths");
-                      // control.prevViewPaths.set([
-                      // ...state.prevViewPaths,
-                      // bookmark,
-                      // ]);
+                      navigateTo(bookmark);
                     }}
                   >
                     {bookmark.name}
@@ -168,7 +148,6 @@ function App() {
           </div>
         )}
 
-        {/* {currentPath && <h1>Current Path: {currentPath.fullPath}</h1>} */}
         <h2>
           {selectedFiles?.length}/{allFiles?.length} Files Selected
         </h2>
@@ -177,27 +156,29 @@ function App() {
           <Button
             onClick={() => {
               goBack();
-
-              //  setting two things back to back doesn't seem to work
             }}
-            // disabled={prevViewPaths?.length === 0}
           >
             <ChevronLeftIcon />
           </Button>
-          {/* <Button
-            // onClick={() => forwardNDirs(1)}
+          <Button
             onClick={() => {
-              forwardPaths.length > 0 &&
-                control.currentPath.set(forwardPaths[0]);
+              goForward();
             }}
-            disabled={forwardPaths.length === 0}
           >
             <ChevronRightIcon />
-          </Button> */}
+          </Button>
           <div className="flex flex-row gap-x-2">
-            <Input
-              onChange={(e: any) => setManualInputDir(e.target.value)}
-            ></Input>
+            <Input onChange={(e: any) => setManualInputDir(e.target.value)} />
+            File Search:
+            <SyncInput stateKey="fileSearchString" />
+            
+            <SyncBoolean stateKey="enabledTest" type="checkbox" />
+            <SyncBoolean stateKey="enabledTest" type="switch" />
+            <SyncBoolean
+              stateKey="enabledTest"
+              type="toggle-button"
+              toggleButtonVariant={{ variant: "ghost", size: "sm" }}
+            />
 
             <Button
               onClick={() => {
@@ -224,7 +205,11 @@ function App() {
         <label className="text-lg ">Prompt</label>
       </div>
       <Textarea
-        onChange={(e: any) => control.prompt.set(e.target?.value)}
+        onChange={(e: any) =>
+          control.prompt.set(e.target?.value, {
+            optimistic: true,
+          })
+        }
         value={state.prompt}
         placeholder="Additional Prompt"
       ></Textarea>

@@ -1,4 +1,7 @@
-import { FileDirInfo } from "@u-tools/core/modules/files-factory/files-folder";
+import {
+  FileDirInfo,
+  FileWithContent,
+} from "@u-tools/core/modules/files-factory/files-folder";
 import { CompletionsResponse } from "@u-tools/core/modules/utils/open-ai-completions-api";
 import { defaultPath } from ".";
 
@@ -11,6 +14,8 @@ type GPTModels = "gpt-3.5-turbo" | "gpt-3.5";
 
 const gptModels: GPTModels[] = ["gpt-3.5-turbo", "gpt-3.5"];
 
+type APIStatus = "IDLE" | "FETCH" | "IN_PROGRESS" | "DONE" | "ERROR";
+
 // get keys from gpt models and make a union type
 export type ServerClientState = {
   count: number;
@@ -19,9 +24,16 @@ export type ServerClientState = {
   directoryData: FileDirInfo[];
   navigation: NavigationState;
   prompt: string;
-  completionAPIStatus: "IDLE" | "FETCH" | "IN_PROGRESS" | "DONE" | "ERROR";
+  completionAPIStatus: APIStatus;
   completionResponse: CompletionsResponse;
   model: GPTModels;
+  // openedFile: FileDirInfo | null
+  // openedFileContent: string
+  // openAIFileUpload:
+  fileSearchString: string;
+  fileSearchResult: FileDirInfo[];
+  fileContentSearchResult: FileWithContent[];
+  enabledTest: boolean;
 };
 
 export const defaultState: ServerClientState = {
@@ -48,4 +60,8 @@ export const defaultState: ServerClientState = {
       total_tokens: 0,
     },
   },
+  fileSearchString: "",
+  fileSearchResult: [],
+  fileContentSearchResult: [],
+  enabledTest: false,
 };

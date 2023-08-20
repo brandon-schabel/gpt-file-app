@@ -4,9 +4,13 @@ import { useServerState } from "@u-tools/react/use-server-state";
 import { ReactNode, createContext, useContext } from "react";
 import { ServerClientState, defaultState } from "../../shared/shared-state";
 
+export type ControlOpts = {
+  optimistic?: boolean;
+};
+
 export const useWebsocketState = () => {
   // TODO need to ensure only one websocket connection is made
-  const { control, state } = useServerState<ServerClientState>({
+  const { control, state } = useServerState<ServerClientState, ControlOpts>({
     defaultState,
     url: "ws://localhost:8080/state",
   });
@@ -55,7 +59,7 @@ export const useWebsocketState = () => {
 };
 
 export const SocketAppContext = createContext<{
-  control: Dispatchers<ServerClientState>;
+  control: Dispatchers<ServerClientState, ControlOpts>;
   state: ServerClientState;
   goBack: () => void;
   navigateTo: (fileOrDir: FileDirInfo) => void;
