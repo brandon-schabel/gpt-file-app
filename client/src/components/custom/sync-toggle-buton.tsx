@@ -1,8 +1,8 @@
-import { useAppState } from "@/socket-context";
+import { BooleanKeys } from "app-types";
 import { VariantProps } from "class-variance-authority";
-import { Button, buttonVariants } from "./button"; // Update the path accordingly
-import { BooleanKeys } from "./type-utils";
-import { ServerClientState } from "../../../../shared/shared-state";
+import { ServerClientState } from "shared/shared-state";
+import { useAppState } from "../../socket-context";
+import { Button, buttonVariants } from "../ui/button";
 
 interface SyncToggleButtonProps {
   stateKey: BooleanKeys<ServerClientState>;

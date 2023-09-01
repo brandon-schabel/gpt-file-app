@@ -1,10 +1,10 @@
-import { useAppState } from "@/socket-context";
 import { VariantProps } from "class-variance-authority";
-import { ServerClientState } from "../../../../shared/shared-state";
-import { Button, buttonVariants } from "./button"; // Update the path accordingly
-import { Checkbox } from "./checkbox"; // Update the path accordingly
-import { Switch } from "./switch"; // Update the path accordingly
-import { BooleanKeys } from "./type-utils";
+import { ServerClientState } from "shared/shared-state";
+import { BooleanKeys } from "../../lib/type-utils";
+import { useAppState } from "../../socket-context";
+import { Button, buttonVariants } from "../ui/button"; // Update the path accordingly
+import { Checkbox } from "../ui/checkbox"; // Update the path accordingly
+import { Switch } from "../ui/switch"; // Update the path accordingly
 
 interface SyncBooleanProps {
   stateKey: BooleanKeys<ServerClientState>;

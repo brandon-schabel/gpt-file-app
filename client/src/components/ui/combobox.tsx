@@ -1,20 +1,16 @@
 import { CaretSortIcon, CheckIcon } from "@radix-ui/react-icons";
 
-import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { cn } from "../../lib/utils";
+import { Button } from "../ui/button";
 import {
   Command,
   CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
-import { useState } from "react";
+} from "../ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 
 export type ComboOption = {
   value: string;

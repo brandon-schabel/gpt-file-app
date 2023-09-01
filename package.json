@@ -1,9 +1,5 @@
 {
   "scripts": {
     "dev": "bun start.ts"
-  },
-  "dependencies": {
-    "@tanstack/react-table": "^8.9.3",
-    "@u-tools/core": "0.0.35"
   }
 }

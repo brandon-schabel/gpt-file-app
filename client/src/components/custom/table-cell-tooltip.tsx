@@ -1,12 +1,12 @@
 import { ComponentProps, ReactNode, useState } from "react";
-import { TableCell } from "./table";
+import { TableCell } from "../ui/table";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "./tooltip";
-import { useToast } from "./use-toast";
+} from "../ui/tooltip";
+import { useToast } from "../ui/use-toast";
 
 type BtnProps = ComponentProps<"button">;
 
@@ -19,10 +19,10 @@ export const TableCellTooltip = ({
   toastOptions,
 }: {
   children: ReactNode;
-  onClick?: BtnProps["onClick"];
+  onClick?: (event: any) => void;
   className?: string;
   tooltipContent: ReactNode;
-  onTooltipContentClick?: BtnProps["onClick"];
+  onTooltipContentClick?: (event: any) => void;
   toastOptions: {
     title: string;
     description: string;

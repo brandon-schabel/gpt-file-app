@@ -6,10 +6,11 @@ import {
   createServerFactory,
   createWSStateMachine,
 } from '@u-tools/core/modules/server-factory';
+import OpenAI from 'openai';
 
-import { createOpenAIApi } from '@u-tools/open-ai/index';
 import { SERVER_PORT } from '../shared';
 import { ServerClientState, defaultState } from '../shared/shared-state';
+import { systemPrompts } from './custom-prompts';
 
 const fileFactory = createFileFactory({ baseDirectory: '~/' });
 const { route, start } = createServerFactory({
@@ -27,9 +28,10 @@ const { route, start } = createServerFactory({
   },
 });
 
-const ai = createOpenAIApi({
+const ai = new OpenAI({
   apiKey: Bun.env.OPEN_AI_KEY || '',
-  organizationId: Bun.env.OPEN_AI_ORGANIZATION_ID || '',
+  organization: Bun.env.OPEN_AI_ORGANIZATION_ID || '',
+  fetch: fetch,
 });
 
 const { onRequest: onBaseRequest } = route('/');
@@ -56,7 +58,7 @@ const server = start({
 });
 
 onStateChange('count', count => {
-  console.log(state);
+  console.log(state, count);
 });
 
 onStateChange('navigation', async navigation => {
@@ -75,16 +77,16 @@ onStateChange('navigation', async navigation => {
 });
 
 onStateChange('completionAPIStatus', async status => {
-  console.log({ status, paths: state.filePathsToSubmit });
+  console.log({ status, paths: state.filesToSubmit });
   if (status !== 'FETCH') return;
-  // if (state.filePathsToSubmit.length === 0) return;
+  // if (state.filesToSubmit.length === 0) return;
 
   control.completionAPIStatus.set('IN_PROGRESS');
 
   let promptToSubmit = ``;
 
   const allFilesContent = await readFilesContents(
-    state.filePathsToSubmit.map(file => file.fullPath)
+    state.filesToSubmit.map(file => file.fullPath)
   );
 
   allFilesContent?.forEach(file => {
@@ -98,23 +100,24 @@ onStateChange('completionAPIStatus', async status => {
 
   promptToSubmit += state.prompt;
 
-  const result = await ai.post({
-    endpoint: '/v1/chat/completions',
-    body: {
-      model: 'gpt-4',
-      messages: [
-        {
-          content:
-            'You are a very good programmer, your job is to teach programming with a typesafe approach, you write clean easy to understand and modern code.',
-          role: 'system',
-        },
-        {
-          content: promptToSubmit,
-          role: 'user',
-        },
-      ],
-    },
+  const result = await ai.chat.completions.create({
+    model: 'gpt-4',
+    messages: [
+      //  here you can add current directory information and other stuff
+      {
+        content: systemPrompts.bunTest.prompt,
+        role: 'system',
+      },
+      {
+        content: promptToSubmit,
+        role: 'user',
+      },
+    ],
   });
+
+  // ai.files.create({
+  //   file: {}
+  // })
 
   if (result) {
     control.completionResponse.set(result);

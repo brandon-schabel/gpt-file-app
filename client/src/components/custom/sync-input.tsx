@@ -1,7 +1,7 @@
-import { useAppState } from "@/socket-context";
-import { ServerClientState } from "../../../../shared/shared-state";
+import { ServerClientState } from "shared/shared-state";
+import { useAppState } from "../../socket-context";
 
-import { Input, InputProps } from "./input";
+import { Input, InputProps } from "../ui/input";
 
 export type InputSync = {
   state?: string;

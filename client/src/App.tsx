@@ -9,14 +9,14 @@ import { ScrollArea } from "./components/ui/scroll-area";
 import { useClipboard } from "@u-tools/react";
 
 import { FileDirInfo } from "@u-tools/core/modules/files-factory/files-folder";
-import { NavBar } from "./components/ui/app-navbar";
 import {
   FileFolderTable,
   getAllFileRows,
-} from "./components/ui/file-folder-table";
+} from "./components/custom/file-folder-table";
+import { SyncBoolean } from "./components/custom/sync-boolean";
+import { SyncInput } from "./components/custom/sync-input";
+import { NavBar } from "./components/ui/app-navbar";
 import { SheetTrigger } from "./components/ui/sheet";
-import { SyncBoolean } from "./components/ui/sync-boolean";
-import { SyncInput } from "./components/ui/sync-input";
 import { Textarea } from "./components/ui/textarea";
 import { OpenAIFileSelectUpload, WhatTheSheet } from "./fine-tune";
 import { useFileFolderTable } from "./hooks";
@@ -24,7 +24,12 @@ import { useAppState } from "./socket-context";
 
 function App() {
   const { state, control, goBack, goForward, navigateTo } = useAppState();
-  const { bookmarks, count, directoryData, filePathsToSubmit } = state;
+  const {
+    bookmarks,
+    // count,
+    directoryData,
+    filesToSubmit: filePathsToSubmit,
+  } = state;
 
   const currentIndex = state.navigation.currentIndex;
   const currentPath = state.navigation.paths[currentIndex];
@@ -34,8 +39,6 @@ function App() {
   });
 
   const renderCount = useRef(0);
-
-  console.log(renderCount.current);
 
   renderCount.current++;
 
@@ -49,7 +52,7 @@ function App() {
   const selectedRowsLen = selectedFiles.length;
 
   useEffect(() => {
-    control.filePathsToSubmit.set(selectedFiles);
+    control.filesToSubmit.set(selectedFiles);
   }, [selectedRowsLen]);
 
   // the below does not include any folders
@@ -118,12 +121,12 @@ function App() {
 
         <div>{pathSegmentLinks}</div>
 
-        <div>
-          <Button onClick={() => control.count.set(count - 1)}>-</Button>
-          <Button onClick={() => control.count.set(count + 1)}>+</Button>
-          <Button onClick={() => control.count.set(0)}>Reset</Button>
-          <pre>{count}</pre>
-        </div>
+        {/* <div> */}
+        {/* <Button onClick={() => control.count.set(count - 1)}>-</Button>
+          <Button onClick={() => control.count.set(count + 1)}>+</Button> */}
+        {/* <Button onClick={() => control.count.set(0)}>Reset</Button> */}
+        {/* <pre>{count}</pre> */}
+        {/* </div> */}
 
         {false && (
           <div className="flex flex-row gap-x-2 w-full justify-center">
@@ -171,7 +174,6 @@ function App() {
             <Input onChange={(e: any) => setManualInputDir(e.target.value)} />
             File Search:
             <SyncInput stateKey="fileSearchString" />
-            
             <SyncBoolean stateKey="enabledTest" type="checkbox" />
             <SyncBoolean stateKey="enabledTest" type="switch" />
             <SyncBoolean
@@ -179,7 +181,6 @@ function App() {
               type="toggle-button"
               toggleButtonVariant={{ variant: "ghost", size: "sm" }}
             />
-
             <Button
               onClick={() => {
                 navigateTo({
@@ -190,7 +191,7 @@ function App() {
                   size: 0,
                 });
               }}
-              className="w-40"
+              className="w-64"
             >
               Go To Path
             </Button>
@@ -220,7 +221,7 @@ function App() {
       <WhatTheSheet
         trigger={
           <SheetTrigger asChild>
-            <Button variant="outline">Fine Tune</Button>
+            {/* <Button variant="outline">Fine Tune</Button> */}
           </SheetTrigger>
         }
       >

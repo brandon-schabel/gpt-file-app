@@ -2,7 +2,7 @@ import {
   FileDirInfo,
   FileWithContent,
 } from "@u-tools/core/modules/files-factory/files-folder";
-import { CompletionsResponse } from "@u-tools/core/modules/utils/open-ai-completions-api";
+import OpenAI from "openai";
 import { defaultPath } from ".";
 
 type NavigationState = {
@@ -20,16 +20,13 @@ type APIStatus = "IDLE" | "FETCH" | "IN_PROGRESS" | "DONE" | "ERROR";
 export type ServerClientState = {
   count: number;
   bookmarks: FileDirInfo[];
-  filePathsToSubmit: FileDirInfo[];
+  filesToSubmit: FileDirInfo[];
   directoryData: FileDirInfo[];
   navigation: NavigationState;
   prompt: string;
   completionAPIStatus: APIStatus;
-  completionResponse: CompletionsResponse;
+  completionResponse: OpenAI.Chat.Completions.ChatCompletion;
   model: GPTModels;
-  // openedFile: FileDirInfo | null
-  // openedFileContent: string
-  // openAIFileUpload:
   fileSearchString: string;
   fileSearchResult: FileDirInfo[];
   fileContentSearchResult: FileWithContent[];
@@ -39,7 +36,7 @@ export type ServerClientState = {
 export const defaultState: ServerClientState = {
   count: 0,
   bookmarks: [],
-  filePathsToSubmit: [],
+  filesToSubmit: [],
   directoryData: [],
   navigation: {
     paths: [defaultPath],

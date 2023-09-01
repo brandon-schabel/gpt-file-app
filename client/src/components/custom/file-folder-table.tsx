@@ -9,26 +9,6 @@ import {
   type Table as TableType,
 } from "@tanstack/react-table";
 
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { useAppState } from "@/socket-context";
 import { FileDirInfo } from "@u-tools/core/modules/files-factory/files-folder";
 import { useClipboard } from "@u-tools/react";
 import {
@@ -40,9 +20,29 @@ import {
   FolderIcon,
 } from "lucide-react";
 import { ComponentProps, ReactNode, useEffect } from "react";
-import { Checkbox } from "./checkbox";
+import { useAppState } from "../../socket-context";
+import { Button } from "../ui/button";
+import { Checkbox } from "../ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
+import { Input } from "../ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../ui/table";
+import { useToast } from "../ui/use-toast";
 import { TableCellTooltip } from "./table-cell-tooltip";
-import { useToast } from "./use-toast";
 
 type BtnProps = ComponentProps<"button">;
 
@@ -88,35 +88,46 @@ const SortBtn = ({
   );
 };
 
+const isFileInQueue = (filesToSubmit: FileDirInfo[], file: FileDirInfo) => {
+  return filesToSubmit.some((fileToSubmit) => {
+    return fileToSubmit.fullPath === file.fullPath;
+  });
+};
+
 export const columns: ColumnDef<FileDirInfo>[] = [
   {
     id: "select",
-    header: ({ table }) => {
-      const allFileRows = getAllFileRows(table);
-      const checkedRows = allFileRows.filter((row) => row.getIsSelected());
-
-      const isChecked = allFileRows.length === checkedRows.length;
-
-      return (
-        <Checkbox
-          checked={isChecked}
-          onCheckedChange={() =>
-            isChecked ? deselectAll(table) : selectAllFiles(table)
-          }
-          aria-label="Select all"
-        />
-      );
-    },
+    // header: ({ table }) => {
+    //   return (
+    //     <Checkbox
+    //       checked={isChecked}
+    //       onCheckedChange={() =>
+    //         isChecked ? deselectAll(table) : selectAllFiles(table)
+    //       }
+    //       aria-label="Select all"
+    //     />
+    //   );
+    // },
     cell: ({ row }) => {
       const fileOrDirData = row.original;
       if (fileOrDirData.type === "directory") {
         return null;
       }
 
+      const { state,control} = useAppState();
+
+      const isInQueue = isFileInQueue(state.filesToSubmit, fileOrDirData);
+
       return (
         <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
+          checked={isInQueue}
+          onCheckedChange={() =>{
+            if(!isInQueue){
+              control.filesToSubmit.push(fileOrDirData);
+            }else{
+              control.filesToSubmit.pop();
+            }
+          }}
           aria-label="Select row"
         />
       );
@@ -171,14 +182,14 @@ export const columns: ColumnDef<FileDirInfo>[] = [
     cell: ({ row }) => {
       const fileOrDirData = row.original;
       const {
-        state: { filePathsToSubmit },
+        state: { filesToSubmit },
       } = useAppState();
 
       // const {
       //   fileSubmitQueue: { addFileToQueue, filePathsToSubmit },
       // } = useAppContext();
 
-      const isInQueue = filePathsToSubmit?.some((file) => {
+      const isInQueue = filesToSubmit?.some((file) => {
         return file.fullPath === fileOrDirData.fullPath;
       });
 
@@ -191,7 +202,7 @@ export const columns: ColumnDef<FileDirInfo>[] = [
           {fileOrDirData.type === "file" && (
             <Button
               onClick={() => {
-                filePathsToSubmit.push(fileOrDirData);
+                filesToSubmit.push(fileOrDirData);
                 // addFileToQueue(fileOrDirData);
               }}
               variant={"outline"}
@@ -274,7 +285,7 @@ export const columns: ColumnDef<FileDirInfo>[] = [
 
 export function FileFolderTable({ table }: { table: TableType<FileDirInfo> }) {
   const { setClipboard } = useClipboard();
-  const {navigateTo} = useAppState();
+  const { navigateTo } = useAppState();
 
   useEffect(() => {
     table.setPageSize(1000000000000);
@@ -342,7 +353,7 @@ export function FileFolderTable({ table }: { table: TableType<FileDirInfo> }) {
                 <div
                   className="flex w-32 justify-start text-left"
                   onClick={() => {
-                    navigateTo(row.original)
+                    navigateTo(row.original);
                     // console.log({ original: row.original });
                     // console.log(state.prevViewPaths);
                     //  add callbacks to update other states

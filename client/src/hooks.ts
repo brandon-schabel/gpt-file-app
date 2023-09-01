@@ -24,16 +24,11 @@ import {
   FineTuneResponse,
   FineTunesListResponse,
 } from "@u-tools/open-ai/open-ai-fine-tune-api";
-import { useApiFactory } from "@u-tools/react/use-api-factory";
 import { useLocalStorage } from "@u-tools/react/use-local-storage";
 import { useEffect, useRef, useState } from "react";
-import {
-  SubmitFilesRequest,
-  SubmitFilesResponse,
-  defaultPath,
-} from "../../shared";
-import { CreateOpenAIFileRequest } from "../../shared/api-types";
-import { columns } from "./components/ui/file-folder-table";
+import { CreateOpenAIFileRequest } from "shared/api-types";
+import { SubmitFilesRequest, SubmitFilesResponse } from "shared/index";
+import { columns } from "./components/custom/file-folder-table";
 
 type GPTFileServerAppEndpoints = {
   "/submit-files": {
@@ -132,149 +127,149 @@ export const useBookmarks = () => {
   };
 };
 
-export const useServer = () => {
-  const fileServer = useApiFactory<GPTFileServerAppEndpoints>({
-    baseUrl: "http://localhost:8080",
-    endpoints: [
-      { endpoint: "/submit-files", method: "post" },
-      { endpoint: "/view-directory", method: "post" },
-      { endpoint: "/get-models", method: "get" },
-      { endpoint: "/get-model", method: "get" },
-      { endpoint: "/fine-tune", method: "post" },
-      { endpoint: "/fine-tune/list", method: "get" },
-      { endpoint: "/fine-tune/:id", method: "get" },
-      { endpoint: "/fine-tune/:id/events", method: "get" },
-      { endpoint: "/fine-tune/:id/cancel", method: "delete" },
-      { endpoint: "/files/list", method: "get" },
-      { endpoint: "/files", method: "post" },
-      { endpoint: "/files/:id", method: "get" },
-      { endpoint: "/files/:id/delete", method: "delete" },
-    ],
-    defaultHeaders: {
-      "Content-Type": "application/json",
-    },
-  });
+// export const useServer = () => {
+//   const fileServer = useApiFactory<GPTFileServerAppEndpoints>({
+//     baseUrl: "http://localhost:8080",
+//     endpoints: [
+//       { endpoint: "/submit-files", method: "post" },
+//       { endpoint: "/view-directory", method: "post" },
+//       { endpoint: "/get-models", method: "get" },
+//       { endpoint: "/get-model", method: "get" },
+//       { endpoint: "/fine-tune", method: "post" },
+//       { endpoint: "/fine-tune/list", method: "get" },
+//       { endpoint: "/fine-tune/:id", method: "get" },
+//       { endpoint: "/fine-tune/:id/events", method: "get" },
+//       { endpoint: "/fine-tune/:id/cancel", method: "delete" },
+//       { endpoint: "/files/list", method: "get" },
+//       { endpoint: "/files", method: "post" },
+//       { endpoint: "/files/:id", method: "get" },
+//       { endpoint: "/files/:id/delete", method: "delete" },
+//     ],
+//     defaultHeaders: {
+//       "Content-Type": "application/json",
+//     },
+//   });
 
-  return {
-    useSubmitFilesPaths: fileServer["/submit-files"],
-    useViewDirectory: fileServer["/view-directory"],
-    useListModels: fileServer["/get-models"],
-    useCreateFineTune: fileServer["/fine-tune"],
-    useListFineTunes: fileServer["/fine-tune/list"],
-    useRetrieveFineTune: fileServer["/fine-tune/:id"],
-    useListFineTuneEvents: fileServer["/fine-tune/:id/events"],
-    useCancelFineTune: fileServer["/fine-tune/:id/cancel"],
-    useListFiles: fileServer["/files/list"],
-    useCreateOpenAIFile: fileServer["/files"],
-    useRetrieveFile: fileServer["/files/:id"],
-    useDeleteFile: fileServer["/files/:id/delete"],
-  };
-};
+//   return {
+//     useSubmitFilesPaths: fileServer["/submit-files"],
+//     useViewDirectory: fileServer["/view-directory"],
+//     useListModels: fileServer["/get-models"],
+//     useCreateFineTune: fileServer["/fine-tune"],
+//     useListFineTunes: fileServer["/fine-tune/list"],
+//     useRetrieveFineTune: fileServer["/fine-tune/:id"],
+//     useListFineTuneEvents: fileServer["/fine-tune/:id/events"],
+//     useCancelFineTune: fileServer["/fine-tune/:id/cancel"],
+//     useListFiles: fileServer["/files/list"],
+//     useCreateOpenAIFile: fileServer["/files"],
+//     useRetrieveFile: fileServer["/files/:id"],
+//     useDeleteFile: fileServer["/files/:id/delete"],
+//   };
+// };
 
-export const usePathControl = () => {
-  const { useViewDirectory } = useServer();
-  const { data: directoryData, post: postViewDirectory } = useViewDirectory();
-  const { state: prevViewPaths, set: setPrevViewPaths } = useLocalStorage<
-    FileDirInfo[]
-  >({
-    key: "prevViewPaths",
-    initialState: [],
-  });
+// export const usePathControl = () => {
+//   const { useViewDirectory } = useServer();
+//   const { data: directoryData, post: postViewDirectory } = useViewDirectory();
+//   const { state: prevViewPaths, set: setPrevViewPaths } = useLocalStorage<
+//     FileDirInfo[]
+//   >({
+//     key: "prevViewPaths",
+//     initialState: [],
+//   });
 
-  const { state: forwardPaths, set: setForwardPaths } = useLocalStorage<
-    FileDirInfo[]
-  >({
-    key: "forwardPaths",
-    initialState: [],
-  });
+//   const { state: forwardPaths, set: setForwardPaths } = useLocalStorage<
+//     FileDirInfo[]
+//   >({
+//     key: "forwardPaths",
+//     initialState: [],
+//   });
 
-  const { state: storedCurrentPath, set: setStoredCurrentPath } =
-    useLocalStorage<FileDirInfo>({
-      key: "currentPath",
-      initialState: defaultPath,
-    });
+//   const { state: storedCurrentPath, set: setStoredCurrentPath } =
+//     useLocalStorage<FileDirInfo>({
+//       key: "currentPath",
+//       initialState: defaultPath,
+//     });
 
-  const { state: currentViewPath, set: setNewViewPath } =
-    useLocalStorage<FileDirInfo>({
-      key: "currentViewPath",
-      initialState: defaultPath,
-    });
+//   const { state: currentViewPath, set: setNewViewPath } =
+//     useLocalStorage<FileDirInfo>({
+//       key: "currentViewPath",
+//       initialState: defaultPath,
+//     });
 
-  const fetchPath = (path: string) => {
-    return postViewDirectory({ path });
-  };
+//   const fetchPath = (path: string) => {
+//     return postViewDirectory({ path });
+//   };
 
-  useEffect(() => {
-    if (storedCurrentPath?.fullPath) {
-      fetchPath(storedCurrentPath.fullPath);
-    }
-  }, [storedCurrentPath?.fullPath]);
+//   useEffect(() => {
+//     if (storedCurrentPath?.fullPath) {
+//       fetchPath(storedCurrentPath.fullPath);
+//     }
+//   }, [storedCurrentPath?.fullPath]);
 
-  const changeDir = (fileOrDir: FileDirInfo) => {
-    setPrevViewPaths([...prevViewPaths, currentViewPath]);
-    setForwardPaths([]);
-    setNewViewPath(fileOrDir);
-    setStoredCurrentPath(fileOrDir);
-    fetchPath(fileOrDir.fullPath);
-  };
+//   const changeDir = (fileOrDir: FileDirInfo) => {
+//     setPrevViewPaths([...prevViewPaths, currentViewPath]);
+//     setForwardPaths([]);
+//     setNewViewPath(fileOrDir);
+//     setStoredCurrentPath(fileOrDir);
+//     fetchPath(fileOrDir.fullPath);
+//   };
 
-  const backNDirs = (numDirs: number = 1) => {
-    const prevPath = prevViewPaths[prevViewPaths.length - numDirs];
-    if (prevPath) {
-      setNewViewPath(prevPath);
-      setForwardPaths([currentViewPath, ...forwardPaths]);
-      setPrevViewPaths((prev) => prev.slice(0, -numDirs));
-      fetchPath(prevPath.fullPath);
-    }
-  };
+//   const backNDirs = (numDirs: number = 1) => {
+//     const prevPath = prevViewPaths[prevViewPaths.length - numDirs];
+//     if (prevPath) {
+//       setNewViewPath(prevPath);
+//       setForwardPaths([currentViewPath, ...forwardPaths]);
+//       setPrevViewPaths((prev) => prev.slice(0, -numDirs));
+//       fetchPath(prevPath.fullPath);
+//     }
+//   };
 
-  const forwardNDirs = (numDirs: number = 1) => {
-    const nextPath = forwardPaths[numDirs - 1];
-    if (nextPath) {
-      setNewViewPath(nextPath);
-      setPrevViewPaths([...prevViewPaths, currentViewPath]);
-      setForwardPaths((forward) => forward.slice(numDirs));
-      fetchPath(nextPath.fullPath);
-    }
-  };
+//   const forwardNDirs = (numDirs: number = 1) => {
+//     const nextPath = forwardPaths[numDirs - 1];
+//     if (nextPath) {
+//       setNewViewPath(nextPath);
+//       setPrevViewPaths([...prevViewPaths, currentViewPath]);
+//       setForwardPaths((forward) => forward.slice(numDirs));
+//       fetchPath(nextPath.fullPath);
+//     }
+//   };
 
-  return {
-    prevViewPaths,
-    forwardPaths,
-    storedCurrentPath,
-    currentViewPath,
-    forwardNDirs,
-    backNDirs,
-    changeDir,
-    directoryData,
-  };
-};
+//   return {
+//     prevViewPaths,
+//     forwardPaths,
+//     storedCurrentPath,
+//     currentViewPath,
+//     forwardNDirs,
+//     backNDirs,
+//     changeDir,
+//     directoryData,
+//   };
+// };
 
-export const useFileSubmitQueue = () => {
-  const { state: filePathsToSubmit, set: setFilePathsToSubmit } =
-    useLocalStorage<FileDirInfo[]>({
-      key: "filePathsToSubmit",
-      initialState: [],
-    });
+// export const useFileSubmitQueue = () => {
+//   const { state: filePathsToSubmit, set: setFilePathsToSubmit } =
+//     useLocalStorage<FileDirInfo[]>({
+//       key: "filePathsToSubmit",
+//       initialState: [],
+//     });
 
-  const removeFileFromQueue = (file: FileDirInfo) => {
-    setFilePathsToSubmit((prevFiles) =>
-      prevFiles.filter((f) => f.fullPath !== file.fullPath)
-    );
-  };
+//   const removeFileFromQueue = (file: FileDirInfo) => {
+//     setFilePathsToSubmit((prevFiles) =>
+//       prevFiles.filter((f) => f.fullPath !== file.fullPath)
+//     );
+//   };
 
-  const addFileToQueue = (file: FileDirInfo) => {
-    if (!filePathsToSubmit.some((f) => f.fullPath === file.fullPath)) {
-      setFilePathsToSubmit((prevFiles) => [...prevFiles, file]);
-    }
-  };
+//   const addFileToQueue = (file: FileDirInfo) => {
+//     if (!filePathsToSubmit.some((f) => f.fullPath === file.fullPath)) {
+//       setFilePathsToSubmit((prevFiles) => [...prevFiles, file]);
+//     }
+//   };
 
-  return {
-    filePathsToSubmit,
-    removeFileFromQueue,
-    addFileToQueue,
-  };
-};
+//   return {
+//     filePathsToSubmit,
+//     removeFileFromQueue,
+//     addFileToQueue,
+//   };
+// };
 
 export const useWatchValueChangeCount = (key: string, value: any) => {
   const changeCounts = useRef<Record<string, number>>({});

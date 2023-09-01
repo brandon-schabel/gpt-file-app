@@ -1,7 +1,7 @@
-import { useAppState } from "@/socket-context";
 import { Switch } from "@radix-ui/react-switch";
-import { ServerClientState } from "../../../../shared/shared-state";
-import { BooleanKeys } from "./type-utils";
+import { BooleanKeys } from "app-types";
+import { ServerClientState } from "shared/shared-state";
+import { useAppState } from "../../socket-context";
 
 interface SyncSwitchProps {
   stateKey: BooleanKeys<ServerClientState>;

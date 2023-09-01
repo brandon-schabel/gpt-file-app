@@ -1,4 +1,4 @@
-import { ComboOption } from "@/components/ui/combobox";
+import { ComboOption } from "../components/ui/combobox";
 
 export const defaultModels: ComboOption[] = [
   {

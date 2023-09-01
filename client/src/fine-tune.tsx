@@ -1,18 +1,18 @@
-import {
-    Sheet,
-    SheetClose,
-    SheetContent,
-    SheetDescription,
-    SheetFooter,
-    SheetHeader,
-    SheetTitle,
-} from "@/components/ui/sheet";
 import { FileDirInfo } from "@u-tools/core/modules/files-factory/files-folder";
 import { ReactNode, useMemo, useState } from "react";
+import { FileFolderTable } from "./components/custom/file-folder-table";
 import { Button } from "./components/ui/button";
-import { FileFolderTable } from "./components/ui/file-folder-table";
 import { Input } from "./components/ui/input";
-import { useFileFolderTable, useServer } from "./hooks";
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "./components/ui/sheet";
+import { useFileFolderTable } from "./hooks";
 import { useAppState } from "./socket-context";
 
 export function WhatTheSheet({
@@ -50,7 +50,7 @@ export const OpenAIFileSelectUpload = ({
   dirData: FileDirInfo[] | null;
 }) => {
   // const { useCreateOpenAIFile } = useServer();
-  const {control, state} = useAppState()
+  const { control, state } = useAppState();
   const [purpose, setPurpose] = useState("");
   // const { data, post } = useCreateOpenAIFile();
 

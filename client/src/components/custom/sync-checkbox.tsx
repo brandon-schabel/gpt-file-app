@@ -1,4 +1,7 @@
-import { useAppState } from "@/socket-context";
+import { ServerClientState } from "shared/shared-state";
+import { Checkbox } from "ui/checkbox";
+import { BooleanKeys } from "../../lib/type-utils";
+import { useAppState } from "../../socket-context";
 
 interface SyncCheckboxProps {
   stateKey: BooleanKeys<ServerClientState>;
