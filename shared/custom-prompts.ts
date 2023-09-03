@@ -52,26 +52,28 @@ export type PromptType = {
 
 export const systemPrompts = {
   bunTest: {
-    id: 'bunTest',
-    title: 'Bun Test',
+    id: "bunTest",
+    title: "Bun Test",
     prompt: `
 ${baseCodePrompt}
 ${bunInfo}
 ${bunTest}`,
   },
   bunCode: {
-    id: 'bunCode',
-    title: 'Bun Code',
+    id: "bunCode",
+    title: "Bun Code",
     prompt: `
 ${baseCodePrompt}
 ${bunInfo}
     `,
   },
   typescriptCode: {
-    id: 'typescriptCode',
-    title: 'TypeScript Code',
+    id: "typescriptCode",
+    title: "TypeScript Code",
     prompt: `
 ${baseCodePrompt}
     `,
   },
 } satisfies { [key: string]: PromptType };
+
+export type PromptKeys = keyof typeof systemPrompts;
