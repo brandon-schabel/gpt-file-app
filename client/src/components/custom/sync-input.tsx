@@ -1,6 +1,7 @@
 import { ServerClientState } from "shared/shared-state";
 import { useAppState } from "../../socket-context";
 
+import { StringKeys } from "../../lib/type-utils";
 import { Input, InputProps } from "../ui/input";
 
 export type InputSync = {
@@ -48,10 +49,6 @@ export const QInput = ({
     />
   );
 };
-
-type StringKeys<T> = {
-  [K in keyof T]: T[K] extends string ? K : never;
-}[keyof T];
 
 // TODO for selects, you can create an option config if it's a type that is a union string type
 export const SyncInput = ({
