@@ -97,34 +97,23 @@ const isFileInQueue = (filesToSubmit: FileDirInfo[], file: FileDirInfo) => {
 export const columns: ColumnDef<FileDirInfo>[] = [
   {
     id: "select",
-    // header: ({ table }) => {
-    //   return (
-    //     <Checkbox
-    //       checked={isChecked}
-    //       onCheckedChange={() =>
-    //         isChecked ? deselectAll(table) : selectAllFiles(table)
-    //       }
-    //       aria-label="Select all"
-    //     />
-    //   );
-    // },
     cell: ({ row }) => {
       const fileOrDirData = row.original;
       if (fileOrDirData.type === "directory") {
         return null;
       }
 
-      const { state,control} = useAppState();
+      const { state, control } = useAppState();
 
       const isInQueue = isFileInQueue(state.filesToSubmit, fileOrDirData);
 
       return (
         <Checkbox
           checked={isInQueue}
-          onCheckedChange={() =>{
-            if(!isInQueue){
+          onCheckedChange={() => {
+            if (!isInQueue) {
               control.filesToSubmit.push(fileOrDirData);
-            }else{
+            } else {
               control.filesToSubmit.pop();
             }
           }}
@@ -178,43 +167,6 @@ export const columns: ColumnDef<FileDirInfo>[] = [
     },
   },
   {
-    id: "add-action",
-    cell: ({ row }) => {
-      const fileOrDirData = row.original;
-      const {
-        state: { filesToSubmit },
-      } = useAppState();
-
-      // const {
-      //   fileSubmitQueue: { addFileToQueue, filePathsToSubmit },
-      // } = useAppContext();
-
-      const isInQueue = filesToSubmit?.some((file) => {
-        return file.fullPath === fileOrDirData.fullPath;
-      });
-
-      if (!isInQueue) {
-        return null;
-      }
-
-      return (
-        <div className="flex w-full justify-start">
-          {fileOrDirData.type === "file" && (
-            <Button
-              onClick={() => {
-                filesToSubmit.push(fileOrDirData);
-                // addFileToQueue(fileOrDirData);
-              }}
-              variant={"outline"}
-            >
-              <span className="font-bold text-lg">+</span>
-            </Button>
-          )}
-        </div>
-      );
-    },
-  },
-  {
     id: "bookmark-action",
     enableHiding: false,
     cell: ({ row }) => {
@@ -225,10 +177,6 @@ export const columns: ColumnDef<FileDirInfo>[] = [
         state: { bookmarks },
         control,
       } = useAppState();
-      // const {
-      //   bookmarks: { addBookmark, removeBookmark, bookmarks },
-      // } = useAppContext();
-
       const { fullPath } = fileOrDirData;
 
       const isBookmarked = bookmarks.some((bookmark) => {
@@ -354,24 +302,22 @@ export function FileFolderTable({ table }: { table: TableType<FileDirInfo> }) {
                   className="flex w-32 justify-start text-left"
                   onClick={() => {
                     navigateTo(row.original);
-                    // console.log({ original: row.original });
-                    // console.log(state.prevViewPaths);
-                    //  add callbacks to update other states
-                    // control?.prevViewPaths?.set([
-                    //   ...(state?.prevViewPaths || []),
-                    //   row.original,
-                    // ]);
-                    // control.currentPath.set(row.original);
                   }}
                 >
                   {type === "directory" ? (
-                    <Button>
-                      <FolderIcon /> {name}
-                    </Button>
+                    <div className="flex space-x-2">
+                      <div>
+                        <FolderIcon />
+                      </div>{" "}
+                      <div>{name}</div>
+                    </div>
                   ) : (
-                    <>
-                      <FileIcon /> <span>{name}</span>
-                    </>
+                    <div className="flex space-x-2">
+                      <div>
+                        <FileIcon />
+                      </div>
+                      <div>{name}</div>
+                    </div>
                   )}
                 </div>
               </TableCellTooltip>

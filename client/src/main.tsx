@@ -1,11 +1,11 @@
+import { RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import ReactDOM from "react-dom/client";
-import App from "./App";
 import { Toaster } from "./components/ui/toaster";
 import "./index.css";
+import { router } from "./router";
 import { SocketContextProvider } from "./socket-context";
 
-// Render our app!
 const rootElement = document.getElementById("root")!;
 if (!rootElement.innerHTML) {
   const root = ReactDOM.createRoot(rootElement);
@@ -13,7 +13,7 @@ if (!rootElement.innerHTML) {
     <StrictMode>
       <SocketContextProvider>
         <Toaster />
-        <App />
+        <RouterProvider router={router} />
       </SocketContextProvider>
     </StrictMode>
   );
