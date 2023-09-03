@@ -1,4 +1,5 @@
-import { FileDirInfo } from "@u-tools/core/modules/files-factory/files-folder";
+import { Link } from "@tanstack/react-router";
+import { useAppState } from "../../socket-context";
 import {
   Menubar,
   MenubarCheckboxItem,
@@ -9,18 +10,17 @@ import {
 } from "./menubar";
 
 export const NavBar = ({
-  bookmarks,
-  changeDir,
   editBookmarkToggle,
   setEditBookmarkToggle,
 }: {
-  bookmarks: FileDirInfo[];
   setEditBookmarkToggle: (value: boolean) => void;
-  changeDir: (bookmark: FileDirInfo) => void;
   editBookmarkToggle: boolean;
 }) => {
+  const { state, navigateTo } = useAppState();
+  const { bookmarks } = state;
+
   return (
-    <Menubar  className="w-screen">
+    <Menubar className="w-screen">
       <MenubarMenu>
         <MenubarTrigger>File</MenubarTrigger>
         <MenubarContent>
@@ -38,15 +38,28 @@ export const NavBar = ({
         <MenubarTrigger>Bookmarks</MenubarTrigger>
         <MenubarContent>
           {bookmarks.map((bookmark) => {
-          return (
+            return (
               <MenubarItem
                 key={bookmark.fullPath}
-                onClick={() => changeDir(bookmark)}
+                onClick={() => navigateTo(bookmark)}
               >
                 {bookmark.name}
               </MenubarItem>
             );
           })}
+        </MenubarContent>
+      </MenubarMenu>
+
+      <MenubarMenu>
+        <MenubarTrigger>Nav</MenubarTrigger>
+
+        <MenubarContent>
+          <MenubarItem asChild>
+            <Link to="/">Home</Link>
+          </MenubarItem>
+          <MenubarItem asChild>
+            <Link to="/trainer">Trainer</Link>
+          </MenubarItem>
         </MenubarContent>
       </MenubarMenu>
     </Menubar>
