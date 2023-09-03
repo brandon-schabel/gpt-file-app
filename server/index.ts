@@ -1,6 +1,6 @@
 import {
   createFileFactory,
-  readFilesContents,
+readFilesContents,
 } from '@u-tools/core/modules/files-factory/files-folder';
 import {
   createServerFactory,
@@ -10,9 +10,10 @@ import OpenAI from 'openai';
 
 import { SERVER_PORT } from '../shared';
 import { ServerClientState, defaultState } from '../shared/shared-state';
-import { systemPrompts } from './custom-prompts';
+import { systemPrompts } from '../shared/custom-prompts';
 
 const fileFactory = createFileFactory({ baseDirectory: '~/' });
+
 const { route, start } = createServerFactory({
   wsPaths: ['/state'],
   enableBodyParser: true,
@@ -114,6 +115,8 @@ onStateChange('completionAPIStatus', async status => {
       },
     ],
   });
+
+  
 
   // ai.files.create({
   //   file: {}
