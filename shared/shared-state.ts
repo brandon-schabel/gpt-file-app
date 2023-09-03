@@ -4,6 +4,7 @@ import {
 } from "@u-tools/core/modules/files-factory/files-folder";
 import OpenAI from "openai";
 import { defaultPath } from ".";
+import { PromptKeys } from "./custom-prompts";
 
 type NavigationState = {
   paths: FileDirInfo[];
@@ -31,6 +32,7 @@ export type ServerClientState = {
   fileSearchResult: FileDirInfo[];
   fileContentSearchResult: FileWithContent[];
   enabledTest: boolean;
+  systemPrompt: PromptKeys;
 };
 
 export const defaultState: ServerClientState = {
@@ -61,4 +63,5 @@ export const defaultState: ServerClientState = {
   fileSearchResult: [],
   fileContentSearchResult: [],
   enabledTest: false,
+  systemPrompt: "bunCode",
 };

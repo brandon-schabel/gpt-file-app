@@ -25,7 +25,9 @@
     "@radix-ui/react-toast": "^1.1.4",
     "@radix-ui/react-toggle": "^1.0.3",
     "@radix-ui/react-tooltip": "^1.0.6",
+    "@tanstack/react-router": "beta",
     "@tanstack/react-table": "^8.9.3",
+    "@types/react-syntax-highlighter": "^15.5.7",
     "@u-tools/core": "latest",
     "@u-tools/react": "latest",
     "autoprefixer": "^10.4.14",
@@ -38,6 +40,8 @@
     "prettier": "^3.0.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-markdown": "^8.0.7",
+    "react-syntax-highlighter": "^15.5.0",
     "tailwind-merge": "^1.14.0",
     "tailwindcss": "^3.3.3",
     "tailwindcss-animate": "^1.0.6"
