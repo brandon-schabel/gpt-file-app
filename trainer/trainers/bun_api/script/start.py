@@ -8,109 +8,85 @@ from ...scripts.fetch_files import download_md_to_jsonl
 from ...scripts.prepare_data import clean_markdown
 from ...scripts.setup import OPEN_AI_KEY
 
-openai.api_key = OPEN_AI_KEY
-
-
 # Step 2.1: Importing loguru
 from loguru import logger
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+openai.api_key = OPEN_AI_KEY
 
-# Step 2.2: Configuring loguru
+# Constants
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+RAW_DOCS_PATH = os.path.join(SCRIPT_DIR, "../data/raw_docs_data.jsonl")
+CLEANED_DOCS_PATH = os.path.join(SCRIPT_DIR, "../data/cleaned_docs_data.jsonl")
+
+openai.api_key = OPEN_AI_KEY
 logger.add(os.path.join(SCRIPT_DIR, "script_logs.log"), rotation="1 day")  # Rotating log every day
-logger.info("Script started")
+
 
 def save_data_to_file(filename, data):
-    file_path = os.path.join(SCRIPT_DIR, filename)
-    with open(file_path, "w") as f:
+    with open(filename, "w") as f:
         for item in data:
             f.write(json.dumps(item) + "\n")
 
-if __name__ == "__main__":
-    raw_docs_data_path = os.path.join(
-        SCRIPT_DIR, "../data/raw_docs_data.jsonl")
-    cleaned_docs_data_path = os.path.join(
-        SCRIPT_DIR, "../data/cleaned_docs_data.jsonl")
 
-    logger.info(f"raw_docs_data_path: {raw_docs_data_path}")
+def load_data_from_file(file_path):
+    with open(file_path, 'r') as f:
+        return [json.loads(line.strip()) for line in f.readlines()]
 
-    dataset = []
 
-    if os.path.exists(raw_docs_data_path):
-        user_input = input(
-            "Raw docs file already exists. Do you want to load it? (y/n): ")
+def get_user_input(prompt):
+    return input(prompt).lower() == "y"
 
-        if user_input.lower() == "y":
-            with open(raw_docs_data_path, 'r') as f:
-                dataset = [json.loads(line.strip()) for line in f.readlines()]
-            logger.info("Loaded existing raw docs data.")
-        else:
-            try:
-                logger.info("Downloading docs...")
-                dataset = download_md_to_jsonl(
-                    raw_docs_data_path, filter_filename="api/")
-                logger.info("Docs saved to " + raw_docs_data_path)
-                save_data_to_file(raw_docs_data_path, dataset)
-            except Exception as err:
-                logger.error(f"Error downloading docs: {err}")
-                exit()
-    else:
-        try:
-            logger.info("Downloading docs...")
-            dataset = download_md_to_jsonl(
-                raw_docs_data_path, filter_filename="api/")
-            logger.info("Docs saved to docs.jsonl")
-            save_data_to_file(raw_docs_data_path, dataset)
-        except Exception as err:
-            logger.error(f"Error downloading docs: {err}")
-            exit()
 
-    user_input = input("Clean Data Next? (y/n): ")
-
-    if user_input.lower() == "y":
-        logger.info("Continuing...")
-    else:
-        logger.info("Exiting...")
-        exit()
-
+def download_and_save(file_path, filter_filename="api/"):
     try:
-        logger.info("Cleaning data...")
-        for entry in dataset:
-            for message in entry["messages"]:
-                print(message)
-                message["content"] = clean_markdown(message["content"])
-
-        save_data_to_file(cleaned_docs_data_path, dataset)
-        logger.info("Data cleaned")
+        logger.info("Downloading docs...")
+        dataset = download_md_to_jsonl(file_path, filter_filename)
+        logger.info(f"Docs saved to {file_path}")
+        save_data_to_file(file_path, dataset)
+        return dataset
     except Exception as err:
-        logger.error(f"Error cleaning data: {err}")
+        logger.error(f"Error downloading docs: {err}")
         exit()
 
-    with open(cleaned_docs_data_path, "w") as f:
-        for entry in dataset:
-            f.write(json.dumps(entry) + "\n")
 
+def clean_data(dataset):
+    logger.info("Cleaning data...")
+    for entry in dataset:
+        for message in entry["messages"]:
+            message["content"] = clean_markdown(message["content"])
+    save_data_to_file(CLEANED_DOCS_PATH, dataset)
     logger.info("Data cleaned")
 
-    user_input = input("Upload? (y/n): ")
-    if user_input.lower() == "y":
-        logger.info("Uploading...")
+
+def main():
+    logger.info("Script started")
+    
+    dataset = []
+    if os.path.exists(RAW_DOCS_PATH) and get_user_input("Raw docs file already exists. Do you want to load it? (y/n): "):
+        dataset = load_data_from_file(RAW_DOCS_PATH)
+        logger.info("Loaded existing raw docs data.")
+    else:
+        dataset = download_and_save(RAW_DOCS_PATH)
+
+    if get_user_input("Clean Data Next? (y/n): "):
+        clean_data(dataset)
     else:
         logger.info("Exiting...")
         exit()
 
-    try:
-        logger.info("Uploading data...")
-        training_data_result = upload_training_data(cleaned_docs_data_path)
-        logger.info("Data uploaded")
-    except Exception as err:
-        logger.error(f"Error uploading data: {err}")
+    if get_user_input("Upload? (y/n): "):
+        try:
+            logger.info("Uploading data...")
+            training_data_result = upload_training_data(CLEANED_DOCS_PATH)
+            logger.info("Data uploaded")
+        except Exception as err:
+            logger.error(f"Error uploading data: {err}")
+            exit()
+    else:
+        logger.info("Exiting...")
         exit()
 
-    user_input = input("Start training? (y/n): ")
-    if user_input.lower() == "y":
-        logger.info("Training...")
-    else:
+    if not get_user_input("Start training? (y/n): "):
         logger.info("Exiting...")
         exit()
 
@@ -119,7 +95,6 @@ if __name__ == "__main__":
 
     while True:
         currFineTune = openai.FineTuningJob.retrieve(currFineTune.id)
-
         logger.info(currFineTune)
 
         if currFineTune.status == "succeeded":
@@ -131,3 +106,7 @@ if __name__ == "__main__":
         else:
             logger.info("Training in progress")
             sleep(5)
+
+
+if __name__ == "__main__":
+    main()
