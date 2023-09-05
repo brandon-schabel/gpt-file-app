@@ -22,10 +22,14 @@ import { useAppState } from "../socket-context";
 
 export function Home() {
   const { state, control } = useAppState();
-  const { directoryData, filesToSubmit } = state;
+  const { directoryData, filesToSubmit, fileSearchStatus, fileSearchResult } =
+    state;
+
   const table = useFileFolderTable({
-    directoryData,
+    directoryData:
+      fileSearchStatus === "DONE" ? fileSearchResult : directoryData,
   });
+
   const { setClipboard } = useClipboard();
 
   const selectedFiles = table.getSelectedRowModel().rows.map((row) => {

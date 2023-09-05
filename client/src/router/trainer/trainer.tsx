@@ -1,6 +1,4 @@
-import { Button } from "../../components/ui/button";
-import { SheetTrigger } from "../../components/ui/sheet";
-import { OpenAIFileSelectUpload, WhatTheSheet } from "../../fine-tune";
+import { OpenAIFileSelectUpload } from "../../fine-tune";
 import { useAppState } from "../../socket-context";
 
 export const Trainer = () => {
@@ -9,15 +7,15 @@ export const Trainer = () => {
   return (
     <div>
       <h1>Utilities</h1>
-      <WhatTheSheet
+      {/* <WhatTheSheet
         trigger={
           <SheetTrigger asChild>
             <Button variant="outline">Trainer</Button>
           </SheetTrigger>
         }
-      >
+      > */}
         <OpenAIFileSelectUpload dirData={directoryData} />
-      </WhatTheSheet>
+      {/* </WhatTheSheet> */}
     </div>
   );
 };

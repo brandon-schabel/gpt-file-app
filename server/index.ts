@@ -1,6 +1,6 @@
 import {
   createFileFactory,
-readFilesContents,
+  readFilesContents,
 } from '@u-tools/core/modules/files-factory/files-folder';
 import {
   createServerFactory,
@@ -9,8 +9,8 @@ import {
 import OpenAI from 'openai';
 
 import { SERVER_PORT } from '../shared';
-import { ServerClientState, defaultState } from '../shared/shared-state';
 import { systemPrompts } from '../shared/custom-prompts';
+import { ServerClientState, defaultState } from '../shared/shared-state';
 
 const fileFactory = createFileFactory({ baseDirectory: '~/' });
 
@@ -49,6 +49,7 @@ const {
   control,
   onStateChange,
   updateStateAndDispatch,
+  whenValueIs,
 } = createWSStateMachine<ServerClientState>(defaultState);
 
 const server = start({
@@ -80,8 +81,6 @@ onStateChange('navigation', async navigation => {
 onStateChange('completionAPIStatus', async status => {
   console.log({ status, paths: state.filesToSubmit });
   if (status !== 'FETCH') return;
-  // if (state.filesToSubmit.length === 0) return;
-
   control.completionAPIStatus.set('IN_PROGRESS');
 
   let promptToSubmit = ``;
@@ -102,11 +101,17 @@ onStateChange('completionAPIStatus', async status => {
   promptToSubmit += state.prompt;
 
   const result = await ai.chat.completions.create({
+    // model: 'gpt-4',
+    // model: 'ft:gpt-3.5-turbo-0613:personal::7uu9vk5r',
     model: 'gpt-4',
     messages: [
       //  here you can add current directory information and other stuff
       {
-        content: systemPrompts.bunTest.prompt,
+        content: 'You are a bun expert',
+        role: 'system',
+      },
+      {
+        content: systemPrompts[state.systemPrompt].prompt,
         role: 'system',
       },
       {
@@ -116,12 +121,6 @@ onStateChange('completionAPIStatus', async status => {
     ],
   });
 
-  
-
-  // ai.files.create({
-  //   file: {}
-  // })
-
   if (result) {
     control.completionResponse.set(result);
     control.completionAPIStatus.set('DONE');
@@ -129,4 +128,28 @@ onStateChange('completionAPIStatus', async status => {
   }
 
   control.completionAPIStatus.set('IDLE');
+});
+
+whenValueIs('fileSearchStatus', 'IN_PROGRESS').then(async () => {
+  console.log('file search in progress');
+
+  console.log({
+    navigation: state.navigation,
+    currentPath: state.navigation.paths[state.navigation.currentIndex],
+    fileSearchString: state.fileSearchString,
+  });
+  try {
+    const fileSearchRes = await fileFactory.recursiveFileSearch({
+      searchString: state.fileSearchString,
+      directory: state.navigation.paths[state.navigation.currentIndex].fullPath,
+    });
+
+    control.fileSearchStatus.set('DONE');
+    control.fileSearchResult.set(fileSearchRes);
+
+    console.log({ fileSearchRes });
+  } catch (err) {
+    console.log({ upDog: err });
+    control.fileSearchStatus.set('ERROR');
+  }
 });

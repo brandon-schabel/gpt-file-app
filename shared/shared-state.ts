@@ -16,6 +16,7 @@ type GPTModels = "gpt-3.5-turbo" | "gpt-3.5";
 const gptModels: GPTModels[] = ["gpt-3.5-turbo", "gpt-3.5"];
 
 type APIStatus = "IDLE" | "FETCH" | "IN_PROGRESS" | "DONE" | "ERROR";
+type OSOperationStatus = "IDLE" | "IN_PROGRESS" | "DONE" | "ERROR";
 
 // get keys from gpt models and make a union type
 export type ServerClientState = {
@@ -28,7 +29,9 @@ export type ServerClientState = {
   completionAPIStatus: APIStatus;
   completionResponse: OpenAI.Chat.Completions.ChatCompletion;
   model: GPTModels;
+  /* File Search */
   fileSearchString: string;
+  fileSearchStatus: OSOperationStatus;
   fileSearchResult: FileDirInfo[];
   fileContentSearchResult: FileWithContent[];
   enabledTest: boolean;
@@ -61,6 +64,7 @@ export const defaultState: ServerClientState = {
   },
   fileSearchString: "",
   fileSearchResult: [],
+  fileSearchStatus: "IDLE",
   fileContentSearchResult: [],
   enabledTest: false,
   systemPrompt: "bunCode",

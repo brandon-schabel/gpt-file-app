@@ -49,10 +49,8 @@ export const OpenAIFileSelectUpload = ({
 }: {
   dirData: FileDirInfo[] | null;
 }) => {
-  // const { useCreateOpenAIFile } = useServer();
   const { control, state } = useAppState();
   const [purpose, setPurpose] = useState("");
-  // const { data, post } = useCreateOpenAIFile();
 
   const filteredData = useMemo(
     () =>

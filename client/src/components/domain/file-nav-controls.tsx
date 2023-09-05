@@ -6,7 +6,7 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 
 export const FileNavControls = () => {
-  const { goBack, goForward, navigateTo } = useAppState();
+  const { goBack, goForward, navigateTo, control } = useAppState();
   const [manualInputDir, setManualInputDir] = useState("");
 
   return (
@@ -27,8 +27,6 @@ export const FileNavControls = () => {
       </Button>
       <div className="flex flex-row gap-x-2">
         <Input onChange={(e: any) => setManualInputDir(e.target.value)} />
-        File Search:
-        <SyncInput stateKey="fileSearchString" />
         <Button
           onClick={() => {
             navigateTo({
@@ -42,6 +40,21 @@ export const FileNavControls = () => {
           className="w-64"
         >
           Go To Path
+        </Button>
+        File Search:
+        <SyncInput stateKey="fileSearchString" />
+        <Button
+          variant="secondary"
+          onClick={() => {
+            control.fileSearchStatus.set("IN_PROGRESS");
+          }}
+        >
+          Search
+        </Button>
+        <Button onClick={() => {
+          control.fileSearchStatus.set("IDLE")
+        }}>
+          Clear
         </Button>
       </div>
     </div>
