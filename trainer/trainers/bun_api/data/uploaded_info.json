@@ -1,10 +1,10 @@
 {
     "object": "file",
-    "id": "file-wr1Fg0gi8rJ8fVqWZDut1MRa",
+    "id": "file-sqOSppuzIEYqdgcqhaUEiu5n",
     "purpose": "fine-tune",
     "filename": "file",
     "bytes": 130727,
-    "created_at": 1693888106,
+    "created_at": 1693888860,
     "status": "uploaded",
     "status_details": null
 }

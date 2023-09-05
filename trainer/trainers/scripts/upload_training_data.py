@@ -4,7 +4,7 @@ import json
 from loguru import logger
 
 
-def upload_training_data(file_path: str):
+def upload_training_data(file_path: str, save_path: str):
     logger.info("Uploading data..." + file_path)
 
     try:
@@ -16,8 +16,8 @@ def upload_training_data(file_path: str):
 
         print(result)
 
-        #  write result to json file
-        json.dump(result, open("uploaded.json", "w"), indent=4)
+        # write result to json file
+        json.dump(result, open(save_path, "w"), indent=4)
 
         return result
     except Exception as err:

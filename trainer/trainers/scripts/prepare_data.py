@@ -1,10 +1,78 @@
 # We start by importing the required packages
 import json
+import openai
 import tiktoken
+from tiktoken import Tokenizer
 import numpy as np
 from collections import defaultdict
 import re
 
+from ..scripts.setup import OPEN_AI_KEY
+
+openai.api_key = OPEN_AI_KEY
+
+tokenizer = Tokenizer()
+
+def summarize_completion(prompt, max_tokens=4000):
+    """
+    Obtain a summary for the given prompt.
+    """
+    if count_tokens(prompt) <= max_tokens:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            max_tokens=max_tokens
+        )
+        assistant_message = next(
+            (message['content'] for message in response['choices'][0]['messages'] if message['role'] == 'assistant'),
+            ""
+        )
+        return assistant_message
+    else:
+        chunks = split_content(prompt, max_length=max_tokens)
+        summaries = [summarize_completion(chunk, max_tokens=max_tokens) for chunk in chunks]
+        return "\n".join(summaries)
+
+def count_tokens(text: str) -> int:
+    """
+    Count the number of tokens in a given text using tiktoken.
+    """
+    return len(list(tokenizer.tokenize(text)))
+
+
+def split_content(content: str, max_length: int = 3500) -> list:
+    """
+    Splits the content into chunks based on token count.
+    """
+    # If the content is short enough, just return it as-is in a single chunk
+    if count_tokens(content) <= max_length:
+        return [content]
+
+    chunks = []
+    current_chunk = ""
+    current_length = 0
+
+    # Splitting by spaces for simplicity; might break words that are more than one token
+    words = content.split()
+
+    for word in words:
+        if current_length + count_tokens(word) > max_length:
+            chunks.append(current_chunk.strip())
+            current_chunk = ""
+            current_length = 0
+
+        current_chunk += word + ' '  # Adding space after each word
+        current_length += count_tokens(word)
+
+    if current_chunk:
+        chunks.append(current_chunk.strip())
+
+    return chunks
 
 # Cleaning function
 def clean_markdown(content: str) -> str:
@@ -41,7 +109,7 @@ def validate_and_clean_data(data):
     return data
 
 
-def prepare_data(input_path: str, output_path: str):
+def prepare_data(input_path: str, output_path: str, summarize: bool = False):
     # Step 1: Load the data from the input_path
     with open(input_path, "r") as f:
         dataset = [json.loads(line) for line in f]
@@ -54,11 +122,18 @@ def prepare_data(input_path: str, output_path: str):
     with open(output_path, "w") as f:
         for entry in dataset:
             f.write(json.dumps(entry) + "\n")
+            
+            
 
     # Step 4: Load the cleaned data for validation
-    data_path = "cleaned_docs.jsonl"
+    data_path = output_path
     with open(data_path) as f:
         dataset = [json.loads(line) for line in f]
+        
+    if summarize:
+        for entry in dataset:
+            for message in entry["messages"]:
+                message["content"] = summarize_completion(message["content"])
 
     # We can inspect the data quickly by checking the number of examples and the first item
 
