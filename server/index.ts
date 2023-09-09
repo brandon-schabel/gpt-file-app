@@ -4,7 +4,8 @@ import {
 } from '@u-tools/core/modules/files-factory/files-folder';
 import {
   createServerFactory,
-  createWSStateMachine,
+  createStateManager,
+  createWSStateHandler,
 } from '@u-tools/core/modules/server-factory';
 import OpenAI from 'openai';
 
@@ -43,14 +44,14 @@ onBaseRequest(async ({ request }) => {
 
 // TODO: state could occasionally be written to a json file and then be loaded
 // when the server starts up incase client looses the data somehow
-const {
-  websocketHandler,
-  state,
-  control,
-  onStateChange,
-  updateStateAndDispatch,
-  whenValueIs,
-} = createWSStateMachine<ServerClientState>(defaultState);
+// const { websocketHandler, state, control, onStateChange, whenValueIs } =
+//   createWSStateMachine<ServerClientState>(defaultState);
+
+const manager = createStateManager<ServerClientState>(defaultState);
+const { onStateChange, state, whenValueIs, dispatch } = manager;
+
+const websocketHandler = createWSStateHandler(manager);
+
 
 const server = start({
   port: SERVER_PORT,
@@ -72,16 +73,14 @@ onStateChange('navigation', async navigation => {
     currentPathData.fullPath
   );
 
-  console.log({ directoryData });
-
   // TODO add mode where where it only broadcasts to the client it was sent from
-  control.directoryData.set(directoryData);
+  dispatch.directoryData.set(directoryData);
 });
 
 onStateChange('completionAPIStatus', async status => {
   console.log({ status, paths: state.filesToSubmit });
   if (status !== 'FETCH') return;
-  control.completionAPIStatus.set('IN_PROGRESS');
+  dispatch.completionAPIStatus.set('IN_PROGRESS');
 
   let promptToSubmit = ``;
 
@@ -101,13 +100,11 @@ onStateChange('completionAPIStatus', async status => {
   promptToSubmit += state.prompt;
 
   const result = await ai.chat.completions.create({
-    // model: 'gpt-4',
-    // model: 'ft:gpt-3.5-turbo-0613:personal::7uu9vk5r',
     model: 'gpt-4',
     messages: [
       //  here you can add current directory information and other stuff
       {
-        content: 'You are a bun expert',
+        content: 'You are a professional python coder',
         role: 'system',
       },
       {
@@ -122,34 +119,26 @@ onStateChange('completionAPIStatus', async status => {
   });
 
   if (result) {
-    control.completionResponse.set(result);
-    control.completionAPIStatus.set('DONE');
+    dispatch.completionResponse.set(result);
+    dispatch.completionAPIStatus.set('DONE');
     return;
   }
 
-  control.completionAPIStatus.set('IDLE');
+  dispatch.completionAPIStatus.set('IDLE');
 });
 
 whenValueIs('fileSearchStatus', 'IN_PROGRESS').then(async () => {
-  console.log('file search in progress');
-
-  console.log({
-    navigation: state.navigation,
-    currentPath: state.navigation.paths[state.navigation.currentIndex],
-    fileSearchString: state.fileSearchString,
-  });
   try {
     const fileSearchRes = await fileFactory.recursiveFileSearch({
       searchString: state.fileSearchString,
       directory: state.navigation.paths[state.navigation.currentIndex].fullPath,
     });
 
-    control.fileSearchStatus.set('DONE');
-    control.fileSearchResult.set(fileSearchRes);
+    dispatch.fileSearchStatus.set('DONE');
+    dispatch.fileSearchResult.set(fileSearchRes);
 
     console.log({ fileSearchRes });
   } catch (err) {
-    console.log({ upDog: err });
-    control.fileSearchStatus.set('ERROR');
+    dispatch.fileSearchStatus.set('ERROR');
   }
 });

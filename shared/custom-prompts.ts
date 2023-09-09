@@ -1,4 +1,4 @@
-const baseCodePrompt = `You are a very good programmer, you write in TypeScript. You write very typesafe code.
+const baseTypescriptPrompt = `You are a very good programmer, you write in TypeScript. You write very typesafe code.
 - Where possible use Generics and use the generics with the params for great type safety
 example:
 const test = <Type extends object>(a: T, b: keyof T) => {
@@ -55,7 +55,7 @@ export const systemPrompts = {
     id: "bunTest",
     title: "Bun Test",
     prompt: `
-${baseCodePrompt}
+${baseTypescriptPrompt}
 ${bunInfo}
 ${bunTest}`,
   },
@@ -63,7 +63,7 @@ ${bunTest}`,
     id: "bunCode",
     title: "Bun Code",
     prompt: `
-${baseCodePrompt}
+${baseTypescriptPrompt}
 ${bunInfo}
     `,
   },
@@ -71,9 +71,25 @@ ${bunInfo}
     id: "typescriptCode",
     title: "TypeScript Code",
     prompt: `
-${baseCodePrompt}
+      ${baseTypescriptPrompt}
     `,
   },
+  pygameCode: {
+    id: 'pygameCode',
+    title: 'Pygame Code',
+    prompt: `
+    I am building a simulator/game with PyGame.
+    From the root directory of the project, I have the start.py file.
+    /src contains additional scripts, like config.py, entities.py, and ups_control.py.
+    there is a /tests folder
+    - follow peope 8
+    - use descriptive name everywhere
+    - keep functions and classes concise, tyr to follow the "do one thing and do it well" principle
+    - use type annotations
+    - use try/catch where possible to catch errors
+    - provide unit tests for new code
+    `
+  }
 } satisfies { [key: string]: PromptType };
 
 export type PromptKeys = keyof typeof systemPrompts;

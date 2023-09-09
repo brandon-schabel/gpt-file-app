@@ -1,96 +1,70 @@
-# We start by importing the required packages
-import json
-import openai
-import tiktoken
-from tiktoken import Tokenizer
-import numpy as np
-from collections import defaultdict
-import re
-
 from ..scripts.setup import OPEN_AI_KEY
+import openai
+import json
+import numpy as np
+import re
+from collections import defaultdict
+from loguru import logger
+from tiktoken import get_encoding
 
 openai.api_key = OPEN_AI_KEY
 
-tokenizer = Tokenizer()
+# Initialize the tokenizer
+encoding = get_encoding("cl100k_base")
 
-def summarize_completion(prompt, max_tokens=4000):
-    """
-    Obtain a summary for the given prompt.
-    """
-    if count_tokens(prompt) <= max_tokens:
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ],
-            max_tokens=max_tokens
-        )
-        assistant_message = next(
-            (message['content'] for message in response['choices'][0]['messages'] if message['role'] == 'assistant'),
-            ""
-        )
-        return assistant_message
-    else:
-        chunks = split_content(prompt, max_length=max_tokens)
-        summaries = [summarize_completion(chunk, max_tokens=max_tokens) for chunk in chunks]
-        return "\n".join(summaries)
 
 def count_tokens(text: str) -> int:
-    """
-    Count the number of tokens in a given text using tiktoken.
-    """
-    return len(list(tokenizer.tokenize(text)))
+    """Count the number of tokens in a given text using tiktoken."""
+    encoding = get_encoding("cl100k_base")
+    return len(encoding.encode(text))
 
 
-def split_content(content: str, max_length: int = 3500) -> list:
-    """
-    Splits the content into chunks based on token count.
-    """
-    # If the content is short enough, just return it as-is in a single chunk
-    if count_tokens(content) <= max_length:
-        return [content]
+instruction = "Reduce the text while ensuring you keep the important details. If there are code examples, add more variations. Ignore performance metrics and useless/unneeded information."
+instruction_tokens = count_tokens(instruction)
 
-    chunks = []
-    current_chunk = ""
-    current_length = 0
 
-    # Splitting by spaces for simplicity; might break words that are more than one token
-    words = content.split()
+def clean_markdown(content: str) -> str:
+    """Clean the markdown content."""
+    markdown_patterns = [
+        (r'#+ ', ''),
+        (r'\[(.*?)\]\(.*?\)', r'\1'),
+        (r'!\[.*?\]\(.*?\)', ''),
+        (r'\*+', ''),
+        (r'`.*?`', ''),
+        (r'```.*?```', '', re.DOTALL),
+        (r'^>.*$', '', re.MULTILINE),
+        (r'^[-*] ', '', re.MULTILINE),
+        (r'^\d+\. ', '', re.MULTILINE),
+        (r'\n+', '\n')
+    ]
+    for pattern, replacement, *args in markdown_patterns:
+        content = re.sub(pattern, replacement, content, *args)
+    return content.strip()
 
-    for word in words:
-        if current_length + count_tokens(word) > max_length:
+
+def split_content_by_sentence(content: str, max_length: int = 2500 - instruction_tokens) -> list:
+    """Splits the content into chunks based on token count but prioritizes sentence boundaries."""
+    # Split by sentence
+    sentences = re.split(r'(?<=[.!?]) +', content)
+
+    chunks, current_chunk, current_length = [], "", 0
+
+    for sentence in sentences:
+        if current_length + count_tokens(sentence) > max_length:
             chunks.append(current_chunk.strip())
-            current_chunk = ""
-            current_length = 0
-
-        current_chunk += word + ' '  # Adding space after each word
-        current_length += count_tokens(word)
+            current_chunk, current_length = "", 0
+            
+        current_chunk += sentence + ' '
+        current_length += count_tokens(sentence)
 
     if current_chunk:
         chunks.append(current_chunk.strip())
 
     return chunks
 
-# Cleaning function
-def clean_markdown(content: str) -> str:
-    content = re.sub(r'#+ ', '', content)
-    content = re.sub(r'\[(.*?)\]\(.*?\)', r'\1', content)
-    content = re.sub(r'!\[.*?\]\(.*?\)', '', content)
-    content = re.sub(r'\*+', '', content)
-    content = re.sub(r'`.*?`', '', content)
-    content = re.sub(r'```.*?```', '', content, flags=re.DOTALL)
-    content = re.sub(r'^>.*$', '', content, flags=re.MULTILINE)
-    content = re.sub(r'^[-*] ', '', content, flags=re.MULTILINE)
-    content = re.sub(r'^\d+\. ', '', content, flags=re.MULTILINE)
-    content = re.sub(r'\n+', '\n', content).strip()
-    return content
-
 
 def validate_and_clean_data(data):
-    # Validate that each data point has the necessary messages
+    """Validate and clean data."""
     for entry in data:
         messages = entry.get("messages", [])
         user_msg = next(
@@ -101,51 +75,92 @@ def validate_and_clean_data(data):
         if not user_msg or not assistant_msg:
             raise ValueError(
                 "Each entry should have a user and an assistant message.")
-
-        # Clean the data
         user_msg['content'] = clean_markdown(user_msg['content'])
         assistant_msg['content'] = clean_markdown(assistant_msg['content'])
-
     return data
 
 
-def prepare_data(input_path: str, output_path: str, summarize: bool = False):
+def summarize_completion(prompt, max_tokens=3000):
+    """
+    Obtain a summary for the given prompt.
+    """
+    total_summary = []
+
+    chunks = split_content_by_sentence(
+        prompt, max_length=max_tokens - instruction_tokens)
+
+    for chunk in chunks:
+        # Calculate the total tokens for chunk and instruction
+        total_tokens = count_tokens(chunk) + instruction_tokens
+
+        # Ensure that the chunk and instruction combined don't exceed max_tokens
+        if total_tokens > max_tokens:
+            logger.warning(
+                f"Chunk too long: {total_tokens} tokens")
+            continue
+
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {
+                    "role": "system",
+                    "content": instruction
+                },
+                {
+                    "role": "user",
+                    "content": chunk
+                }
+            ],
+            max_tokens=max_tokens - total_tokens  # Adjusting for the instruction tokens
+        )
+
+        assistant_message = response['choices'][0]['message']['content']
+
+        logger.info(f"Assistant message: {assistant_message}")
+
+        total_summary.append(assistant_message)
+
+    return "\n".join(total_summary)
+
+
+def prepare_data(input_path: str, output_path: str, summarize: bool = False, save_interval: int = 1):
+    # Step 1: Load the data from the input_path
     # Step 1: Load the data from the input_path
     with open(input_path, "r") as f:
         dataset = [json.loads(line) for line in f]
 
     # Step 2: Clean the Markdown content
-    # Updated to use the new function
     dataset = validate_and_clean_data(dataset)
 
-    # Step 3: Save the cleaned data to output_path
+    # Step 3: Process and save data in intervals
     with open(output_path, "w") as f:
-        for entry in dataset:
+        for index, entry in enumerate(dataset):
+            if summarize:
+                for message in entry["messages"]:
+                    message["content"] = summarize_completion(
+                        message["content"])
             f.write(json.dumps(entry) + "\n")
-            
-            
+
+            # Log progress
+            if (index + 1) % save_interval == 0:
+                logger.info(f"Processed and saved {index + 1} entries.")
 
     # Step 4: Load the cleaned data for validation
-    data_path = output_path
-    with open(data_path) as f:
+    with open(output_path) as f:
         dataset = [json.loads(line) for line in f]
-        
+
     if summarize:
         for entry in dataset:
             for message in entry["messages"]:
                 message["content"] = summarize_completion(message["content"])
 
-    # We can inspect the data quickly by checking the number of examples and the first item
-
-    # Initial dataset stats
-    print("Num examples:", len(dataset))
-    print("First example:")
+    # Logging dataset stats
+    logger.info(f"Num examples: {len(dataset)}")
+    logger.info("First example:")
     for message in dataset[0]["messages"]:
-        print(message)
+        logger.info(message)
 
-    # Now that we have a sense of the data, we need to go through all the different examples and check to make sure the formatting is correct and matches the Chat completions message structure
-
-    # Format error checks
+    # Check the formatting
     format_errors = defaultdict(int)
 
     for ex in dataset:
@@ -176,19 +191,13 @@ def prepare_data(input_path: str, output_path: str, summarize: bool = False):
             format_errors["example_missing_assistant_message"] += 1
 
     if format_errors:
-        print("Found errors:")
+        logger.warning("Found errors:")
         for k, v in format_errors.items():
-            print(f"{k}: {v}")
+            logger.warning(f"{k}: {v}")
     else:
-        print("No errors found")
+        logger.info("No errors found")
 
-    # Beyond the structure of the message, we also need to ensure that the length does not exceed the 4096 token limit.
-
-    # Token counting functions
-    encoding = tiktoken.get_encoding("cl100k_base")
-
-    # not exact!
-    # simplified from https://github.com/openai/openai-cookbook/blob/main/examples/How_to_count_tokens_with_tiktoken.ipynb
+    # Token counting
     def num_tokens_from_messages(messages: list[str], tokens_per_message=3, tokens_per_name=1):
         num_tokens = 0
         for message in messages:
@@ -207,21 +216,9 @@ def prepare_data(input_path: str, output_path: str, summarize: bool = False):
                 num_tokens += len(encoding.encode(message["content"]))
         return num_tokens
 
-    def print_distribution(values, name):
-        print(f"\n#### Distribution of {name}:")
-        print(f"min / max: {min(values)}, {max(values)}")
-        print(f"mean / median: {np.mean(values)}, {np.median(values)}")
-        print(
-            f"p5 / p95: {np.quantile(values, 0.1)}, {np.quantile(values, 0.9)}")
-
-    # Last, we can look at the results of the different formatting operations before proceeding with creating a fine-tuning job:
-
-    # Warnings and tokens counts
-    n_missing_system = 0
-    n_missing_user = 0
-    n_messages = []
-    convo_lens = []
-    assistant_message_lens = []
+    # Warnings and token counts
+    n_missing_system, n_missing_user = 0, 0
+    n_messages, convo_lens, assistant_message_lens = [], [], []
 
     for ex in dataset:
         messages = ex["messages"]
@@ -234,14 +231,12 @@ def prepare_data(input_path: str, output_path: str, summarize: bool = False):
         assistant_message_lens.append(
             num_assistant_tokens_from_messages(messages))
 
-    print("Num examples missing system message:", n_missing_system)
-    print("Num examples missing user message:", n_missing_user)
-    print_distribution(n_messages, "num_messages_per_example")
-    print_distribution(convo_lens, "num_total_tokens_per_example")
-    print_distribution(assistant_message_lens,
-                       "num_assistant_tokens_per_example")
+    logger.info(f"Num examples missing system message: {n_missing_system}")
+    logger.info(f"Num examples missing user message: {n_missing_user}")
+
     n_too_long = sum(l > 4096 for l in convo_lens)
-    print(f"\n{n_too_long} examples may be over the 4096 token limit, they will be truncated during fine-tuning")
+    logger.warning(
+        f"{n_too_long} examples may be over the 4096 token limit, they will be truncated during fine-tuning")
 
     # Pricing and default n_epochs estimate
     MAX_TOKENS_PER_EXAMPLE = 4096
@@ -261,9 +256,9 @@ def prepare_data(input_path: str, output_path: str, summarize: bool = False):
 
     n_billing_tokens_in_dataset = sum(
         min(MAX_TOKENS_PER_EXAMPLE, length) for length in convo_lens)
-    print(
+    logger.info(
         f"Dataset has ~{n_billing_tokens_in_dataset} tokens that will be charged for during training")
-    print(f"By default, you'll train for {n_epochs} epochs on this dataset")
-    print(
+    logger.info(
+        f"By default, you'll train for {n_epochs} epochs on this dataset")
+    logger.info(
         f"By default, you'll be charged for ~{n_epochs * n_billing_tokens_in_dataset} tokens")
-    print("See pricing page to estimate total costs")

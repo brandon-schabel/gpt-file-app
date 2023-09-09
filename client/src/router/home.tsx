@@ -1,5 +1,4 @@
 import { CloudIcon } from "lucide-react";
-import { useEffect } from "react";
 import { Button } from "../components/ui/button";
 
 import { useClipboard } from "@u-tools/react";
@@ -32,13 +31,7 @@ export function Home() {
 
   const { setClipboard } = useClipboard();
 
-  const selectedFiles = table.getSelectedRowModel().rows.map((row) => {
-    return row.original;
-  });
-
-  useEffect(() => {
-    control.filesToSubmit.set(selectedFiles);
-  }, [selectedFiles.length]);
+  const selectedFiles = state.filesToSubmit;
 
   // the below does not include any folders
   const allFiles = getAllFileRows(table);
