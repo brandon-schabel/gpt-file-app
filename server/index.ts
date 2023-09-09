@@ -2,13 +2,14 @@ import {
   createFileFactory,
   readFilesContents,
 } from '@u-tools/core/modules/files-factory/files-folder';
+
 import {
-  createServerFactory,
   createStateManager,
   createWSStateHandler,
-} from '@u-tools/core/modules/server-factory';
+} from '@u-tools/core/modules/state-factory';
 import OpenAI from 'openai';
 
+import { createServerFactory } from '@u-tools/core/modules/server-factory';
 import { SERVER_PORT } from '../shared';
 import { systemPrompts } from '../shared/custom-prompts';
 import { ServerClientState, defaultState } from '../shared/shared-state';
@@ -42,16 +43,10 @@ onBaseRequest(async ({ request }) => {
   return new Response(`Hello World ${request.method}`);
 });
 
-// TODO: state could occasionally be written to a json file and then be loaded
-// when the server starts up incase client looses the data somehow
-// const { websocketHandler, state, control, onStateChange, whenValueIs } =
-//   createWSStateMachine<ServerClientState>(defaultState);
-
 const manager = createStateManager<ServerClientState>(defaultState);
 const { onStateChange, state, whenValueIs, dispatch } = manager;
 
 const websocketHandler = createWSStateHandler(manager);
-
 
 const server = start({
   port: SERVER_PORT,
@@ -60,26 +55,26 @@ const server = start({
   websocket: websocketHandler,
 });
 
-onStateChange('count', count => {
-  console.log(state, count);
-});
-
 onStateChange('navigation', async navigation => {
   const { currentIndex } = navigation;
 
   const currentPathData = navigation.paths[currentIndex];
 
-  const directoryData = await fileFactory.listFilesAndFolderInPath(
-    currentPathData.fullPath
-  );
-
-  // TODO add mode where where it only broadcasts to the client it was sent from
-  dispatch.directoryData.set(directoryData);
+  try {
+    const directoryData = await fileFactory.listFilesAndFolderInPath(
+      currentPathData.fullPath
+    );
+    
+    // TODO add mode where where it only broadcasts to the client it was sent from
+    dispatch.directoryData.set(directoryData);
+  } catch (err) {
+    console.error(err);
+  }
 });
 
 onStateChange('completionAPIStatus', async status => {
-  console.log({ status, paths: state.filesToSubmit });
   if (status !== 'FETCH') return;
+
   dispatch.completionAPIStatus.set('IN_PROGRESS');
 
   let promptToSubmit = ``;
